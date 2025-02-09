@@ -17,6 +17,22 @@
         "command": "srt-subrip.helloWorld",
         "title": "Hello World"
       }
+    ],
+    "languages": [
+      {
+        "id": "srt",
+        "extensions": [
+          ".srt"
+        ],
+        "aliases": ["SubRip", "srt"]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "srt",
+        "scopeName": "source.srt",
+        "path": "./syntaxes/srt.tmLanguage.json"
+      }
     ]
   },
   "scripts": {

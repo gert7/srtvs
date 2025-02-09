@@ -1,0 +1,13 @@
+{
+    "scopeName": "source.srt",
+    "patterns": [
+        {
+            "name": "entity.name.section.srt",
+            "match": "^\\d+$"
+        },
+        {
+            "name": "constant.numeric.timing.srt",
+            "match": "\\d\\d:\\d\\d:\\d\\d,\\d\\d\\d --> \\d\\d:\\d\\d:\\d\\d,\\d\\d\\d"
+        }
+    ]
+}
