@@ -1,3 +1,23 @@
+export interface Subtitle {
+    line_pos: number,
+    index: number,
+    start_ms: number,
+    end_ms: number,
+    length_ms: number,
+    line_lengths: number[]
+}
+
+export function blankSubtitle(): Subtitle {
+    return {
+        line_pos: 0,
+        index: 0,
+        start_ms: 0,
+        end_ms: 0,
+        length_ms: 0,
+        line_lengths: [],
+    }
+}
+
 const matcherFull = /^(\d\d):(\d\d):(\d\d),(\d\d\d) --> (\d\d):(\d\d):(\d\d),(\d\d\d)$/;
 
 export function to_ms(h: number, m: number, s: number, mi: number) {

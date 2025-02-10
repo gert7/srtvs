@@ -76,5 +76,5 @@ export function deactivate() {
 }
 
 function updateStatusBarItem(): void {
-	myStatusBarItem.text = enabled ? 'SRT' : 'srt';
+	myStatusBarItem.text = enabled ? '💬 SRT' : '💭 srt';
 }

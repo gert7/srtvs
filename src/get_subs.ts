@@ -1,8 +1,29 @@
 import * as vscode from 'vscode';
 import { DiagnosticSeverity } from 'vscode';
-import { parseFullTiming } from './subtitle';
+import { blankSubtitle, parseFullTiming, Subtitle } from './subtitle';
 
 const diagnosticCollection = vscode.languages.createDiagnosticCollection("subrip");
+
+export interface SrtEditorData {
+	config: vscode.WorkspaceConfiguration,
+	editor: vscode.TextEditor,
+	line: number,
+	col: number,
+	lines: string[]
+}
+
+export function getData(): SrtEditorData | null {
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) return null;
+    const lines = editor?.document.getText().replace(/\r\n/g, '\n').split('\n');
+	return {
+		config: vscode.workspace.getConfiguration("subrip"),
+		editor: editor,
+		line: editor.selection.active.line,
+		col: editor.selection.active.character,
+		lines: lines,
+	}
+}
 
 const enum State {
 	Index,
@@ -106,7 +127,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 		const line = lines[i];
 
 		if (state == State.Index && line != "") {
-			const n = line.match(/^\d+/);
+			const n = line.match(/^\d+$/);
 			if (!n) {
 				add_error(i, "Error reading subtitle index!");
 				break;
@@ -195,6 +216,39 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 	}
 
 	diagnosticCollection.set(document.uri, diagnostics);
+}
+
+/**
+ * Parse a subtitle file and return the subtitles.
+ * @param lines The LF-terminated lines to parse.
+ * @returns An array of {@link Subtitle} or an error string.
+ */
+export function parse(lines: string[]): Subtitle[] | string {
+	let state = State.Index;
+	let overFirst = false;
+
+	const subtitles: Subtitle[] = [];
+
+	let nextSubtitle = blankSubtitle();
+
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		if (line == "" && overFirst) {
+			nextSubtitle.line_lengths.push(0);
+		} else if (line != "") {
+			const n = line.match(/^\d+$/);
+			if (!n) {
+				return "Error reading subtitle index!";
+			}
+			nextSubtitle.line_pos = i;
+			const index = parseInt(n[0]);
+
+			nextSubtitle.index = index;
+			state = State.Timing;
+		}
+	}
+
+	return subtitles;
 }
 
 export function getDiagnosticCollection(): vscode.DiagnosticCollection {
