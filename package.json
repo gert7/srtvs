@@ -20,6 +20,51 @@
         "title": "Hello World"
       }
     ],
+    "configuration": {
+      "title": "SubRip",
+      "properties": {
+        "subrip.length": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show subtitle duration"
+        },
+        "subrip.showPause": {
+          "type": "boolean",
+          "default": true,
+          "description": "Always show pause"
+        },
+        "subrip.overlapWarning": {
+          "type": "boolean",
+          "default": true,
+          "description": "Warn if subtitle timings overlap"
+        },
+        "subrip.cps": {
+          "type": "boolean",
+          "default": false,
+          "description": "Always show characters per second %"
+        },
+        "subrip.cpsWarning": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show characters per second % if over CPS"
+        },
+        "subrip.minPause": {
+          "type": "number",
+          "default": 100,
+          "description": "Minimum pause between subtitles"
+        },
+        "subrip.maxCPS": {
+          "type": "number",
+          "default": 21,
+          "description": "Maximum characters per second"
+        },
+        "subrip.extraSpaces": {
+          "type": "number",
+          "default": 0,
+          "description": "Added visual distance from subtitles to HUD"
+        }
+      }
+    },
     "languages": [
       {
         "id": "subrip",
