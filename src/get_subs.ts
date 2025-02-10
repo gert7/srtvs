@@ -10,12 +10,6 @@ const enum State {
 	Subtitle
 }
 
-interface Hint {
-	line: number,
-	text: string,
-	length: number,
-}
-
 function fmt_s(ms: number) {
 	let neg = '';
 	if (ms < 0) {
@@ -76,6 +70,13 @@ export function annotateSubs(document: vscode.TextDocument) {
 	const extraSpacesSetting = config.get("extraSpaces") as number;
 	const extra_spaces = " ".repeat(extraSpacesSetting);
 
+	const alwaysCPS = config.get("cps") as boolean;
+	const warningCPS = config.get("cpsWarning") as boolean;
+	const maxCPS = config.get("maxCPS") as number;
+	const showPause = config.get("showPause") as boolean;
+	const overlapWarning = config.get("overlapWarning") as boolean;
+	const lengthEnabled = config.get("length");
+
 	const ins: vscode.InlayHint[] = [];
 	inlays.set(document.uri, ins);
 	const hintList = ins;
@@ -129,8 +130,6 @@ export function annotateSubs(document: vscode.TextDocument) {
 
 			const pauseline = i - 3;
 
-			const showPause = config.get("showPause") as boolean;
-			const overlapWarning = config.get("overlapWarning") as boolean;
 
 			if (showPause && pauseline > 0) {
 				add_hint(pauseline + 1, "                 (" + fmt_s(pause) + ")");
@@ -162,14 +161,10 @@ export function annotateSubs(document: vscode.TextDocument) {
 
 				let dur_bar = "";
 
-				const lengthEnabled = config.get("length");
 				if (lengthEnabled) {
 					dur_bar = dur_bar + extra_spaces + " =  " + fmt_s(last_timing);
 				}
 
-				const alwaysCPS = config.get("cps") as boolean;
-				const warningCPS = config.get("cpsWarning") as boolean;
-				const maxCPS = config.get("maxCPS") as number;
 				if (!isNaN(cps) &&
 					(alwaysCPS || (warningCPS && cps > maxCPS))) {
 						const percent = cps / maxCPS * 100;
