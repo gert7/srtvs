@@ -23,6 +23,11 @@
     "configuration": {
       "title": "SubRip",
       "properties": {
+        "subrip.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enabled HUD by default"
+        },
         "subrip.length": {
           "type": "boolean",
           "default": true,

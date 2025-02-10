@@ -29,10 +29,14 @@ function remove_tags(s: string) {
 
 const decorations: Map<vscode.Uri, Array<vscode.TextEditorDecorationType>> = new Map();
 const inlays: Map<vscode.Uri, Array<vscode.InlayHint>> = new Map();
-const lenses: Map<vscode.Uri, Array<vscode.CodeLens>> = new Map();
 
 export function getInlays(document: vscode.TextDocument): vscode.InlayHint[] | undefined {
 	return inlays.get(document.uri);
+}
+
+export function disposeAllDecorations() {
+	decorations.forEach((arr, _) => arr.forEach((d) => d.dispose()));
+	inlays.forEach((_, k) => inlays.set(k, []));
 }
 
 export function disposeDecorations(document: vscode.TextDocument) {
@@ -44,7 +48,7 @@ export function disposeDecorations(document: vscode.TextDocument) {
 	inlays.set(document.uri, []);
 }
 
-export function annotateSubs(document: vscode.TextDocument) {
+export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 	const config = vscode.workspace.getConfiguration("subrip");
 	const editor = vscode.window.activeTextEditor;
 	if (document.languageId !== "subrip" || document.uri != editor?.document.uri) return;
@@ -75,11 +79,17 @@ export function annotateSubs(document: vscode.TextDocument) {
 	const maxCPS = config.get("maxCPS") as number;
 	const showPause = config.get("showPause") as boolean;
 	const overlapWarning = config.get("overlapWarning") as boolean;
-	const lengthEnabled = config.get("length");
+	const lengthEnabled = config.get("length") as boolean;
 
 	const ins: vscode.InlayHint[] = [];
 	inlays.set(document.uri, ins);
 	const hintList = ins;
+
+	diagnosticCollection.clear();
+
+	if (!enabled) {
+		return;
+	}
 
 	function add_error(ln: number, text: string) {
 		const range = new vscode.Range(ln, 0, ln, lines[ln].length);
@@ -184,7 +194,6 @@ export function annotateSubs(document: vscode.TextDocument) {
 		add_error(lines.length - 1, "Subtitle is not terminated");
 	}
 
-	diagnosticCollection.clear();
 	diagnosticCollection.set(document.uri, diagnostics);
 }
 

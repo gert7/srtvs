@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { annotateSubs, disposeDecorations, getDiagnosticCollection, getInlays } from './get_subs';
+import * as getSubs from './get_subs';
 
-let decorationType: vscode.TextEditorDecorationType | null = null
+let myStatusBarItem: vscode.StatusBarItem;
+let enabled = true;
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "srt-subrip" is now active!');
+	const config = vscode.workspace.getConfiguration("subrip");
 
 	const disposable = vscode.commands.registerCommand('srt-subrip.helloWorld', () => {
 		vscode.window.showInformationMessage('Hello World from srt!');
@@ -15,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.window.onDidChangeActiveTextEditor((editor) => {
 		try {
 			if (editor) {
-				annotateSubs(editor.document);
+				getSubs.annotateSubs(editor.document, enabled);
 			}
 		} catch (e) {
 			console.error(e);
@@ -23,27 +24,57 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	vscode.workspace.onDidOpenTextDocument((document) => {
 		try {
-			annotateSubs(document);
+			getSubs.annotateSubs(document, enabled);
 		} catch (e) {
 			console.error(e);
 		}
 	});
 	vscode.workspace.onDidChangeTextDocument((event) => {
 		try {
-			annotateSubs(event.document);
+			getSubs.annotateSubs(event.document, enabled);
 		} catch (e) {
 			console.error(e);
 		}
 	})
-	vscode.workspace.onDidCloseTextDocument((document) => disposeDecorations(document));
+	vscode.workspace.onDidCloseTextDocument((document) => getSubs.disposeDecorations(document));
 
 	vscode.languages.registerInlayHintsProvider('subrip', {
 		provideInlayHints(document, range, token) {
-			return getInlays(document);
+			return getSubs.getInlays(document);
 		}
 	});
 
-	context.subscriptions.push(getDiagnosticCollection());
+	context.subscriptions.push(getSubs.getDiagnosticCollection());
+
+	const enabledByDefault = config.get("enabled") as boolean;
+
+	enabled = enabledByDefault;
+
+	const myCommandId = 'subrip.toggleHUD';
+	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, () => {
+		enabled = !enabled;
+		const document = vscode.window.activeTextEditor?.document;
+		const editors = vscode.window.visibleTextEditors;
+		for (const editor of editors) {
+			getSubs.annotateSubs(editor.document, enabled);
+		}
+		updateStatusBarItem();
+	}));
+
+	myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+	myStatusBarItem.command = myCommandId;
+	myStatusBarItem.tooltip = "Toggle Overlay and Diagnostics for SubRip files";
+	context.subscriptions.push(myStatusBarItem);
+
+	myStatusBarItem.show();
+
+	updateStatusBarItem();
 }
 
-export function deactivate() { }
+export function deactivate() {
+	getSubs.disposeAllDecorations();
+}
+
+function updateStatusBarItem(): void {
+	myStatusBarItem.text = enabled ? 'SRT' : 'srt';
+}
