@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as getSubs from './get_subs';
+import { registerCommands } from './commands';
 
 let myStatusBarItem: vscode.StatusBarItem;
 let enabled = true;
@@ -69,6 +70,12 @@ export function activate(context: vscode.ExtensionContext) {
 	myStatusBarItem.show();
 
 	updateStatusBarItem();
+
+	try {
+		registerCommands(context);
+	} catch (e) {
+		console.error(e);
+	}
 }
 
 export function deactivate() {

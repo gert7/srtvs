@@ -217,12 +217,21 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 	diagnosticCollection.set(document.uri, diagnostics);
 }
 
+export class ParseError {
+	error: string
+	line: number
+	constructor(error: string, line: number) {
+		this.error = error;
+		this.line = line;
+	}
+}
+
 /**
  * Parse a subtitle file and return the subtitles.
  * @param lines The LF-terminated lines to parse.
  * @returns An array of {@link Subtitle} or an error string.
  */
-export function parse(lines: string[]): Subtitle[] | string {
+export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 	let state = State.Index;
 	let overFirst = false;
 
@@ -238,7 +247,7 @@ export function parse(lines: string[]): Subtitle[] | string {
 			} else if (line != "") {
 				const n = line.match(/^\d+$/);
 				if (!n) {
-					return "Error reading subtitle index!";
+					return new ParseError("Error reading subtitle index!", i);
 				}
 				nextSubtitle.line_pos = i;
 				const index = parseInt(n[0]);
@@ -249,7 +258,7 @@ export function parse(lines: string[]): Subtitle[] | string {
 		} else if (state == State.Timing) {
 			const [from, to] = parseFullTiming(line);
 			if (!from || !to) {
-				return "Error reading duration!";
+				return new ParseError("Error reading duration!", i);
 			}
 
 			nextSubtitle.start_ms = from;
@@ -274,6 +283,27 @@ export function parse(lines: string[]): Subtitle[] | string {
 	}
 
 	return subtitles;
+}
+
+export function findSubtitle(subs: Subtitle[], line: number): number | undefined {
+	let low = 0;
+	let high = subs.length - 1;
+	while (low <= high) {
+		const mid = Math.floor((low + high) / 2);
+		const sub = subs[mid];
+		const start = sub.line_pos;
+		const finish = start + 2 + sub.line_lengths.length;
+		console.log({ line, mid, start, finish });
+		if (line < start) {
+			console.log("too high, going down");
+			high = mid - 1;
+		} else if (line > finish) {
+			console.log("too low, going up");
+			low = mid + 1;
+		} else {
+			return mid;
+		}
+	}
 }
 
 export function getDiagnosticCollection(): vscode.DiagnosticCollection {
