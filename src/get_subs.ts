@@ -15,7 +15,7 @@ export interface SrtEditorData {
 export function getData(): SrtEditorData | null {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) return null;
-    const lines = editor?.document.getText().replace(/\r\n/g, '\n').split('\n');
+	const lines = editor?.document.getText().replace(/\r\n/g, '\n').split('\n');
 	return {
 		config: vscode.workspace.getConfiguration("subrip"),
 		editor: editor,
@@ -31,7 +31,7 @@ const enum State {
 	Subtitle
 }
 
-function fmt_s(ms: number) {
+function fmtS(ms: number) {
 	let neg = '';
 	if (ms < 0) {
 		neg = '-';
@@ -44,7 +44,7 @@ function fmt_s(ms: number) {
 	return `${neg}${timing_secs}.${tm_padded}s`;
 }
 
-function remove_tags(s: string) {
+function removeTags(s: string) {
 	return s.replace(/<[^>]+>/g, "");
 }
 
@@ -161,9 +161,8 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 
 			const pauseline = i - 3;
 
-
 			if (showPause && pauseline > 0) {
-				add_hint(pauseline + 1, "                 (" + fmt_s(pause) + ")");
+				add_hint(pauseline + 1, "                 (" + fmtS(pause) + ")");
 			}
 
 			if (overlapWarning && pause < 0) {
@@ -174,7 +173,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 			state = State.Subtitle;
 		} else if (state == State.Subtitle) {
 			if (line != "") {
-				const clean = remove_tags(line);
+				const clean = removeTags(line);
 				const len = clean.length;
 				total_length += len;
 				line_count++;
@@ -193,13 +192,13 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 				let dur_bar = "";
 
 				if (lengthEnabled) {
-					dur_bar = dur_bar + extra_spaces + " =  " + fmt_s(last_timing);
+					dur_bar = dur_bar + extra_spaces + " =  " + fmtS(last_timing);
 				}
 
 				if (!isNaN(cps) &&
 					(alwaysCPS || (warningCPS && cps > maxCPS))) {
-						const percent = cps / maxCPS * 100;
-						dur_bar = dur_bar + '(' + percent + '%)';
+					const percent = cps / maxCPS * 100;
+					dur_bar = dur_bar + '(' + percent + '%)';
 				}
 
 				add_hint(last_timing_k, dur_bar);
@@ -233,19 +232,45 @@ export function parse(lines: string[]): Subtitle[] | string {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
-		if (line == "" && overFirst) {
-			nextSubtitle.line_lengths.push(0);
-		} else if (line != "") {
-			const n = line.match(/^\d+$/);
-			if (!n) {
-				return "Error reading subtitle index!";
-			}
-			nextSubtitle.line_pos = i;
-			const index = parseInt(n[0]);
+		if (state == State.Index) {
+			if (line == "" && overFirst) {
+				nextSubtitle.line_lengths.push(0);
+			} else if (line != "") {
+				const n = line.match(/^\d+$/);
+				if (!n) {
+					return "Error reading subtitle index!";
+				}
+				nextSubtitle.line_pos = i;
+				const index = parseInt(n[0]);
 
-			nextSubtitle.index = index;
-			state = State.Timing;
+				nextSubtitle.index = index;
+				state = State.Timing;
+			}
+		} else if (state == State.Timing) {
+			const [from, to] = parseFullTiming(line);
+			if (!from || !to) {
+				return "Error reading duration!";
+			}
+
+			nextSubtitle.start_ms = from;
+			nextSubtitle.end_ms = to;
+			nextSubtitle.duration_ms = to - from;
+
+			state = State.Subtitle;
+		} else if (state == State.Subtitle) {
+			if (line == "") {
+				subtitles.push(nextSubtitle);
+				nextSubtitle = blankSubtitle();
+				state = State.Index;
+			} else {
+				const clean_s = removeTags(line);
+				nextSubtitle.line_lengths.push(clean_s.length);
+			}
 		}
+	}
+
+	if (state == State.Subtitle) {
+		subtitles.push(nextSubtitle);
 	}
 
 	return subtitles;

@@ -3,7 +3,7 @@ export interface Subtitle {
     index: number,
     start_ms: number,
     end_ms: number,
-    length_ms: number,
+    duration_ms: number,
     line_lengths: number[]
 }
 
@@ -13,7 +13,7 @@ export function blankSubtitle(): Subtitle {
         index: 0,
         start_ms: 0,
         end_ms: 0,
-        length_ms: 0,
+        duration_ms: 0,
         line_lengths: [],
     }
 }
