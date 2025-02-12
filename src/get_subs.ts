@@ -9,7 +9,12 @@ export interface SrtEditorData {
 	editor: vscode.TextEditor,
 	line: number,
 	col: number,
-	lines: string[]
+	lines: string[],
+	endLine: number
+}
+
+export function getLines(editor: vscode.TextEditor) {
+	return editor.document.getText().replace(/\r\n/g, '\n').split('\n');
 }
 
 export function getData(): SrtEditorData | null {
@@ -19,9 +24,10 @@ export function getData(): SrtEditorData | null {
 	return {
 		config: vscode.workspace.getConfiguration("subrip"),
 		editor: editor,
-		line: editor.selection.active.line,
+		line: editor.selection.start.line,
 		col: editor.selection.active.character,
 		lines: lines,
+		endLine: editor.selection.end.line
 	}
 }
 
@@ -285,7 +291,7 @@ export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 	return subtitles;
 }
 
-export function findSubtitle(subs: Subtitle[], line: number): number | undefined {
+export function findSubtitle(subs: Subtitle[], line: number): number | null {
 	let low = 0;
 	let high = subs.length - 1;
 	while (low <= high) {
@@ -293,17 +299,15 @@ export function findSubtitle(subs: Subtitle[], line: number): number | undefined
 		const sub = subs[mid];
 		const start = sub.line_pos;
 		const finish = start + 2 + sub.line_lengths.length;
-		console.log({ line, mid, start, finish });
 		if (line < start) {
-			console.log("too high, going down");
 			high = mid - 1;
 		} else if (line > finish) {
-			console.log("too low, going up");
 			low = mid + 1;
 		} else {
 			return mid;
 		}
 	}
+	return null;
 }
 
 export function getDiagnosticCollection(): vscode.DiagnosticCollection {

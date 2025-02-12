@@ -18,6 +18,14 @@
       {
         "command": "srt-subrip.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "srt-subrip.echo",
+        "title": "Echo current subtitle"
+      },
+      {
+        "command": "srt-subrip.merge",
+        "title": "Merge subtitles"
       }
     ],
     "configuration": {
