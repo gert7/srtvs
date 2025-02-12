@@ -204,7 +204,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 				if (!isNaN(cps) &&
 					(alwaysCPS || (warningCPS && cps > maxCPS))) {
 					const percent = cps / maxCPS * 100;
-					dur_bar = dur_bar + '(' + percent + '%)';
+					dur_bar = dur_bar + ' (' + Math.floor(percent) + '%)';
 				}
 
 				add_hint(last_timing_k, dur_bar);

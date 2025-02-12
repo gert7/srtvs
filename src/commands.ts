@@ -1,6 +1,23 @@
 import * as vscode from "vscode";
 import { findSubtitle, getData, getLines, ParseError, parseSubtitles, SrtEditorData } from "./get_subs";
-import { Subtitle } from "./subtitle";
+import { makeDurFullMS, Subtitle } from "./subtitle";
+
+function p(line: number, col: number): vscode.Position {
+    return new vscode.Position(line, col);
+}
+
+function r(start: vscode.Position, end: vscode.Position): vscode.Range {
+    return new vscode.Range(start, end);
+}
+
+function lineRange(start: number, end: number): vscode.Range {
+    return r(p(start, 0), p(end, 0));
+}
+
+function lineRangeN(editor: vscode.TextEditor, start: number, end: number): vscode.Range {
+    const endLineLength = editor.document.lineAt(end - 1).text.length;
+    return r(p(start, 0), p(end - 1, endLineLength));
+}
 
 function addToIndices(lines: string[], subs: Subtitle[], start: number, n: number) {
     const offset = subs[start].line_pos;
@@ -60,21 +77,46 @@ function defineCommandSubtitle(
 }
 
 function echoCurrentSubtitle(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
-    // const sub = subs[sub_i];
-    // vscode.window.showWarningMessage(`On subtitle number ${sub.index}`);
-    const line = data.editor.selection.start.line;
-    vscode.window.showWarningMessage(`On line number ${line}`);
+    vscode.window.showWarningMessage(`On line number ${data.line}`);
 }
 
-function subMerge(lines: string[], editor: vscode.TextEditor, subs: Subtitle[], sub_i: number) {
-    const ind_lines = lines.slice(subs[sub_i + 1].line_pos);
-    const new_lines = addToIndices(ind_lines, subs, sub_i + 1, -1).join('\n');
-    const ind_start = new vscode.Position(subs[sub_i + 1].line_pos, 0);
-    const ind_end = new vscode.Position(editor.document.lineCount, 0);
-    editor.edit(editBuilder => {
-        editBuilder.replace(new vscode.Range(ind_start, ind_end), new_lines);
-    })
-    return lines;
+// function subMerge(lines: string[], editor: vscode.TextEditor, subs: Subtitle[], sub_i: number) {
+//     const ind_lines = lines.slice(subs[sub_i + 1].line_pos);
+//     const new_lines = addToIndices(ind_lines, subs, sub_i + 1, -1).join('\n');
+//     const range = lineRange(subs[sub_i + 1].line_pos, editor.document.lineCount);
+
+//     const sub = subs[sub_i];
+//     const next = subs[sub_i + 1];
+//     const del_from = next.line_pos - 1;
+//     const dur_line = makeDurFullMS(sub.start_ms, next.end_ms);
+//     editor.edit(editBuilder => {
+//         editBuilder.replace(range, new_lines);
+//     }).then(() => {
+//         editor.edit(editBuilder => {
+//             editBuilder.delete(lineRange(del_from, del_from + 3));
+//             editBuilder.replace(lineRangeN(editor, sub.line_pos + 1, sub.line_pos + 2), dur_line);
+//         })
+//     })
+
+//     return lines;
+// }
+
+function subMerge(lines: string[], subs: Subtitle[], sub_i: number): string[] {
+    const ind_lines = lines.splice(subs[sub_i + 1].line_pos);
+    const new_lines = addToIndices(ind_lines, subs, sub_i + 1, - 1);
+    console.dir(new_lines);
+    console.log(`${lines.length}, ${ind_lines.length}, ${new_lines.length}`);
+    console.dir(lines);
+    const reindexed = lines.concat(new_lines);
+
+    const sub = subs[sub_i];
+    const next = subs[sub_i + 1];
+    const del_from = next.line_pos - 1;
+    reindexed.splice(del_from, 3);
+
+    const dur_line = makeDurFullMS(sub.start_ms, next.end_ms);
+    reindexed[sub.line_pos + 1] = dur_line;
+    return reindexed;
 }
 
 function srtMerge(data: SrtEditorData, subs: Subtitle[]) {
@@ -97,15 +139,19 @@ function srtMerge(data: SrtEditorData, subs: Subtitle[]) {
         sub_last++;
     }
 
+    let newLines = data.lines;
+
     for (let i = sub_first; i < sub_last; i++) {
-        console.log(`Ukmerge ${i}`);
-        const lines = getLines(data.editor);
-        const result = parseSubtitles(lines);
+        const result = parseSubtitles(newLines);
         if (result instanceof ParseError) {
             vscode.window.showErrorMessage(`Unexpected error on line ${result.line}: ${result.error}`);
+            return;
         }
-        subMerge(lines, data.editor, subs, sub_first);
+        newLines = subMerge(newLines, result, sub_first);
     }
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'));
+    });
 }
 
 export function registerCommands(context: vscode.ExtensionContext) {
