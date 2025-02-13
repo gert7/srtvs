@@ -26,55 +26,79 @@
       {
         "command": "srt-subrip.merge",
         "title": "Merge subtitles"
+      },
+      {
+        "command": "srt-subrip.split",
+        "title": "Split subtitles"
+      },
+      {
+        "command": "srt-subrip.fixIndices",
+        "title": "Fix indices for all subtitles"
       }
     ],
     "configuration": {
       "title": "SubRip",
       "properties": {
-        "subrip.enabled": {
+        "srt-subrip.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enabled HUD by default"
         },
-        "subrip.length": {
+        "srt-subrip.length": {
           "type": "boolean",
           "default": true,
           "description": "Show subtitle duration"
         },
-        "subrip.showPause": {
+        "srt-subrip.showPause": {
           "type": "boolean",
           "default": true,
           "description": "Always show pause"
         },
-        "subrip.overlapWarning": {
+        "srt-subrip.overlapWarning": {
           "type": "boolean",
           "default": true,
           "description": "Warn if subtitle timings overlap"
         },
-        "subrip.cps": {
+        "srt-subrip.cps": {
           "type": "boolean",
           "default": false,
           "description": "Always show characters per second %"
         },
-        "subrip.cpsWarning": {
+        "srt-subrip.cpsWarning": {
           "type": "boolean",
           "default": true,
           "description": "Show characters per second % if over CPS"
         },
-        "subrip.minPause": {
+        "srt-subrip.minPause": {
           "type": "number",
           "default": 100,
           "description": "Minimum pause between subtitles"
         },
-        "subrip.maxCPS": {
+        "srt-subrip.maxCPS": {
           "type": "number",
           "default": 21,
           "description": "Maximum characters per second"
         },
-        "subrip.extraSpaces": {
+        "srt-subrip.extraSpaces": {
           "type": "number",
           "default": 0,
           "description": "Added visual distance from subtitles to HUD"
+        },
+        "srt-subrip.splitMode": {
+          "type": "string",
+          "default": "ask",
+          "description": "Mode to use when using the Split command",
+          "enum": ["length", "half", "ask"],
+          "enumDescriptions": [
+            "50-50 split",
+            "Split time allocated on character count",
+            "Ask every time"
+          ]
+        },
+        "srt-subrip.splitWithMinPause": {
+          "type": "boolean",
+          "default": true,
+          "description": "Add minimum pause when splitting"
         }
       }
     },

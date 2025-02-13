@@ -28,6 +28,20 @@ function addToIndices(lines: string[], subs: Subtitle[], start: number, n: numbe
     return lines;
 }
 
+function fixIndices(lines: string[], subs: Subtitle[]): [string[], boolean] {
+    const newLines = lines.slice();
+    let changed = false;
+    for (let i = 0; i < subs.length; i++) {
+        const sub = subs[i];
+        const should = i + 1;
+        if (sub.index != should) {
+            newLines[sub.line_pos] = should.toString();
+            changed = true;
+        }
+    }
+    return [newLines, changed];
+}
+
 function defineCommand(name: string, func: (data: SrtEditorData) => void): vscode.Disposable {
     return vscode.commands.registerCommand(`srt-subrip.${name}`, () => {
         const data = getData();
@@ -80,33 +94,9 @@ function echoCurrentSubtitle(data: SrtEditorData, subs: Subtitle[], sub_i: numbe
     vscode.window.showWarningMessage(`On line number ${data.line}`);
 }
 
-// function subMerge(lines: string[], editor: vscode.TextEditor, subs: Subtitle[], sub_i: number) {
-//     const ind_lines = lines.slice(subs[sub_i + 1].line_pos);
-//     const new_lines = addToIndices(ind_lines, subs, sub_i + 1, -1).join('\n');
-//     const range = lineRange(subs[sub_i + 1].line_pos, editor.document.lineCount);
-
-//     const sub = subs[sub_i];
-//     const next = subs[sub_i + 1];
-//     const del_from = next.line_pos - 1;
-//     const dur_line = makeDurFullMS(sub.start_ms, next.end_ms);
-//     editor.edit(editBuilder => {
-//         editBuilder.replace(range, new_lines);
-//     }).then(() => {
-//         editor.edit(editBuilder => {
-//             editBuilder.delete(lineRange(del_from, del_from + 3));
-//             editBuilder.replace(lineRangeN(editor, sub.line_pos + 1, sub.line_pos + 2), dur_line);
-//         })
-//     })
-
-//     return lines;
-// }
-
 function subMerge(lines: string[], subs: Subtitle[], sub_i: number): string[] {
     const ind_lines = lines.splice(subs[sub_i + 1].line_pos);
     const new_lines = addToIndices(ind_lines, subs, sub_i + 1, - 1);
-    console.dir(new_lines);
-    console.log(`${lines.length}, ${ind_lines.length}, ${new_lines.length}`);
-    console.dir(lines);
     const reindexed = lines.concat(new_lines);
 
     const sub = subs[sub_i];
@@ -154,7 +144,109 @@ function srtMerge(data: SrtEditorData, subs: Subtitle[]) {
     });
 }
 
+type SplitMode = "length" | "half" | "ask";
+
+async function srtSplit(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
+    let lines = data.lines.slice();
+    const config = vscode.workspace.getConfiguration("srt-subrip");
+    const minPause = config.get("minPause") as number;
+    const splitWithMinPause = config.get("splitWithMinPause") as boolean;
+    let split_mode = config.get("splitMode") as SplitMode;
+    if (split_mode == "ask") {
+        let result = await vscode.window.showQuickPick(['length', 'half'], {
+            placeHolder: "Select how to split the subtitle (set to ask every time)"
+        });
+        if (result != null) {
+            split_mode = result as SplitMode;
+        } else {
+            return;
+        }
+    }
+
+    const sub = subs[sub_i];
+    const line_count = sub.line_lengths.length;
+    if (line_count == 0) {
+        vscode.window.showWarningMessage("Can't split a subtitle with no lines");
+        return;
+    }
+    if (line_count % 2 != 0) {
+        vscode.window.showWarningMessage("Can't split a subtitle with an odd number of lines");
+        return;
+    }
+
+    const ind_lines = lines.splice(subs[sub_i + 1].line_pos);
+    const new_lines = addToIndices(ind_lines, subs, sub_i + 1, 1);
+    lines = lines.concat(new_lines);
+
+    const split_point = sub.line_pos + 1 + line_count / 2;
+    let mp = 0;
+    if (splitWithMinPause) {
+        mp = minPause;
+    }
+
+    let split_ms = 0;
+    if (split_mode == "length") {
+        const half = sub.line_lengths.length / 2;
+        const length_first = sub.line_lengths.slice(0, half).reduce((p, v) => p + v);
+        const length_second = sub.line_lengths.slice(half).reduce((p, v) => p + v);
+        const per = length_first / (length_first + length_second);
+        split_ms = Math.floor(sub.start_ms + sub.duration_ms * per)
+    } else {
+        split_ms = Math.floor(sub.start_ms + sub.duration_ms / 2);
+    }
+
+    const first_duration = makeDurFullMS(sub.start_ms, split_ms - mp);
+    const second_duration = makeDurFullMS(split_ms + mp, sub.end_ms);
+    const new_index = (sub.index + 1).toString();
+
+    lines[sub.line_pos + 1] = first_duration;
+
+    const new_header = [
+        "",
+        new_index,
+        second_duration
+    ];
+
+    const after = lines.splice(split_point + 1);
+    lines = lines.concat(new_header).concat(after);
+
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'))
+    });
+}
+
+function fixIndicesEditor(editor: vscode.TextEditor): boolean | ParseError {
+    const data = getData(editor);
+    if (data == null) {
+        return false;
+    }
+
+    const parseResult = parseSubtitles(data.lines);
+    if (parseResult instanceof ParseError) {
+        return parseResult;
+    }
+
+    const [newLines, changed] = fixIndices(data.lines, parseResult);
+    if (changed) {
+        data.editor.edit(editBuilder => {
+            editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'))
+        });
+    }
+    return changed;
+}
+
+function srtFixIndices(data: SrtEditorData) {
+    const result = fixIndicesEditor(data.editor);
+    if (result instanceof ParseError) {
+        console.error(result);
+        vscode.window.showErrorMessage(result.toString());
+        return;
+    }
+}
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
+    context.subscriptions.push(defineCommandSubtitle("split", srtSplit));
+    context.subscriptions.push(defineCommand("fixIndices", srtFixIndices));
 }

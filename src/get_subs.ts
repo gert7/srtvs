@@ -17,8 +17,8 @@ export function getLines(editor: vscode.TextEditor) {
 	return editor.document.getText().replace(/\r\n/g, '\n').split('\n');
 }
 
-export function getData(): SrtEditorData | null {
-	const editor = vscode.window.activeTextEditor;
+export function getData(editor_in?: vscode.TextEditor): SrtEditorData | null {
+	const editor = editor_in || vscode.window.activeTextEditor;
 	if (!editor) return null;
 	const lines = editor?.document.getText().replace(/\r\n/g, '\n').split('\n');
 	return {
@@ -76,7 +76,7 @@ export function disposeDecorations(document: vscode.TextDocument) {
 }
 
 export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
-	const config = vscode.workspace.getConfiguration("subrip");
+	const config = vscode.workspace.getConfiguration("srt-subrip");
 	const editor = vscode.window.activeTextEditor;
 	if (document.languageId !== "subrip" || document.uri != editor?.document.uri) return;
 
@@ -229,6 +229,10 @@ export class ParseError {
 	constructor(error: string, line: number) {
 		this.error = error;
 		this.line = line;
+	}
+
+	toString(): string {
+		return `Error on line ${this.line}: ${this.error}`;
 	}
 }
 

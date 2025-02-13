@@ -6,7 +6,7 @@ let myStatusBarItem: vscode.StatusBarItem;
 let enabled = true;
 
 export function activate(context: vscode.ExtensionContext) {
-	const config = vscode.workspace.getConfiguration("subrip");
+	const config = vscode.workspace.getConfiguration("srt-subrip");
 
 	const disposable = vscode.commands.registerCommand('srt-subrip.helloWorld', () => {
 		vscode.window.showInformationMessage('Hello World from srt!');
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	enabled = enabledByDefault;
 
-	const myCommandId = 'subrip.toggleHUD';
+	const myCommandId = 'srt-subrip.toggleHUD';
 	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, () => {
 		enabled = !enabled;
 		const document = vscode.window.activeTextEditor?.document;
