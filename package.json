@@ -44,6 +44,11 @@
           "default": true,
           "description": "Enabled HUD by default"
         },
+        "srt-subrip.autofixIndex": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically fix indices"
+        },
         "srt-subrip.length": {
           "type": "boolean",
           "default": true,

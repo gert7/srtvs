@@ -1,14 +1,16 @@
 import * as vscode from 'vscode';
 import * as getSubs from './get_subs';
-import { registerCommands } from './commands';
+import { fixIndicesEditor, registerCommands } from './commands';
 
 let myStatusBarItem: vscode.StatusBarItem;
 let enabled = true;
 
-export function activate(context: vscode.ExtensionContext) {
-	const config = vscode.workspace.getConfiguration("srt-subrip");
+const EXT_NAME = "srt-subrip";
 
-	const disposable = vscode.commands.registerCommand('srt-subrip.helloWorld', () => {
+export function activate(context: vscode.ExtensionContext) {
+	const config = vscode.workspace.getConfiguration(EXT_NAME);
+
+	const disposable = vscode.commands.registerCommand(`${EXT_NAME}.helloWorld`, () => {
 		vscode.window.showInformationMessage('Hello World from srt!');
 	});
 
@@ -33,6 +35,19 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.workspace.onDidChangeTextDocument((event) => {
 		try {
 			getSubs.annotateSubs(event.document, enabled);
+			if (event.reason == null && // not undo or redo
+				event.document.languageId == 'subrip') {
+				const config = vscode.workspace.getConfiguration(EXT_NAME);
+				const autofixIndex = config.get("autofixIndex") as boolean;
+				console.log(autofixIndex);
+				if (autofixIndex) {
+					const editor =
+						vscode.window.visibleTextEditors.find(
+							(e) => e.document.uri == event.document.uri);
+					if (editor)
+						fixIndicesEditor(editor);
+				}
+			}
 		} catch (e) {
 			console.error(e);
 		}
@@ -51,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	enabled = enabledByDefault;
 
-	const myCommandId = 'srt-subrip.toggleHUD';
+	const myCommandId = `${EXT_NAME}.toggleHUD`;
 	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, () => {
 		enabled = !enabled;
 		const document = vscode.window.activeTextEditor?.document;

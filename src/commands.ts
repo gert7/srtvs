@@ -215,7 +215,27 @@ async function srtSplit(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     });
 }
 
-function fixIndicesEditor(editor: vscode.TextEditor): boolean | ParseError {
+interface IndexFixPair {
+    line: number,
+    index: number,
+}
+
+function fixIndicesSurgical(lines: string[], subs: Subtitle[]): IndexFixPair[] {
+    const pairs: IndexFixPair[] = [];
+    for (let i = 0; i < subs.length; i++) {
+        const sub = subs[i];
+        const should = i + 1;
+        if (sub.index != should) {
+            pairs.push({
+                line: sub.line_pos,
+                index: should
+            });
+        }
+    }
+    return pairs;
+}
+
+export function fixIndicesEditor(editor: vscode.TextEditor): boolean | ParseError {
     const data = getData(editor);
     if (data == null) {
         return false;
@@ -226,11 +246,23 @@ function fixIndicesEditor(editor: vscode.TextEditor): boolean | ParseError {
         return parseResult;
     }
 
-    const [newLines, changed] = fixIndices(data.lines, parseResult);
+    // const [newLines, changed] = fixIndices(data.lines, parseResult);
+    // if (changed) {
+    //     data.editor.edit(editBuilder => {
+    //         editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'))
+    //     });
+    // }
+    const changes = fixIndicesSurgical(data.lines, parseResult);
+    const changed = changes.length > 0;
     if (changed) {
         data.editor.edit(editBuilder => {
-            editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'))
-        });
+            for (const pair of changes) {
+                const start = new vscode.Position(pair.line, 0);
+                const end = new vscode.Position(pair.line, data.lines[pair.line].length);
+                const range = new vscode.Range(start, end);
+                editBuilder.replace(range, pair.index.toString());
+            }
+        })
     }
     return changed;
 }
