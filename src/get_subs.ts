@@ -22,7 +22,7 @@ export function getData(editor_in?: vscode.TextEditor): SrtEditorData | null {
 	if (!editor) return null;
 	const lines = editor?.document.getText().replace(/\r\n/g, '\n').split('\n');
 	return {
-		config: vscode.workspace.getConfiguration("subrip"),
+		config: vscode.workspace.getConfiguration("srt-subrip"),
 		editor: editor,
 		line: editor.selection.start.line,
 		col: editor.selection.active.character,
@@ -156,7 +156,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 			last_timing = to - from;
 
 			if (from < cur_start) {
-				add_error(i - 1, "Subtitle appears before previous subtitle!");
+				add_error(i, "Subtitle appears before previous subtitle!");
 			}
 
 			last_end = cur_end;

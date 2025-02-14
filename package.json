@@ -16,10 +16,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "srt-subrip.helloWorld",
-        "title": "Hello World"
-      },
-      {
         "command": "srt-subrip.echo",
         "title": "Echo current subtitle"
       },
@@ -34,6 +30,14 @@
       {
         "command": "srt-subrip.fixIndices",
         "title": "Fix indices for all subtitles"
+      },
+      {
+        "command": "srt-subrip.sort",
+        "title": "Sort subtitles by start time"
+      },
+      {
+        "command": "srt-subrip.fixTiming",
+        "title": "Fix timing for the current subtitle"
       }
     ],
     "configuration": {
@@ -79,6 +83,11 @@
           "default": 100,
           "description": "Minimum pause between subtitles"
         },
+        "srt-subrip.minDuration": {
+          "type": "number",
+          "default": 1000,
+          "description": "Minimum duration for one subtitle"
+        },
         "srt-subrip.maxCPS": {
           "type": "number",
           "default": 21,
@@ -104,6 +113,16 @@
           "type": "boolean",
           "default": true,
           "description": "Add minimum pause when splitting"
+        },
+        "srt-subrip.fixWithMinPause": {
+          "type": "boolean",
+          "default": true,
+          "description": "Add minimum pause when fixing timings"
+        },
+        "srt-subrip.fixBadMinPause": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fix non-overlapping subtitles if pause is less than the minimum pause when fixing timings"
         }
       }
     },

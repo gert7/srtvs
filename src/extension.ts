@@ -10,12 +10,6 @@ const EXT_NAME = "srt-subrip";
 export function activate(context: vscode.ExtensionContext) {
 	const config = vscode.workspace.getConfiguration(EXT_NAME);
 
-	const disposable = vscode.commands.registerCommand(`${EXT_NAME}.helloWorld`, () => {
-		vscode.window.showInformationMessage('Hello World from srt!');
-	});
-
-	context.subscriptions.push(disposable);
-
 	vscode.window.onDidChangeActiveTextEditor((editor) => {
 		try {
 			if (editor) {

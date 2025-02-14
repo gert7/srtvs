@@ -28,20 +28,6 @@ function addToIndices(lines: string[], subs: Subtitle[], start: number, n: numbe
     return lines;
 }
 
-function fixIndices(lines: string[], subs: Subtitle[]): [string[], boolean] {
-    const newLines = lines.slice();
-    let changed = false;
-    for (let i = 0; i < subs.length; i++) {
-        const sub = subs[i];
-        const should = i + 1;
-        if (sub.index != should) {
-            newLines[sub.line_pos] = should.toString();
-            changed = true;
-        }
-    }
-    return [newLines, changed];
-}
-
 function defineCommand(name: string, func: (data: SrtEditorData) => void): vscode.Disposable {
     return vscode.commands.registerCommand(`srt-subrip.${name}`, () => {
         const data = getData();
@@ -246,12 +232,6 @@ export function fixIndicesEditor(editor: vscode.TextEditor): boolean | ParseErro
         return parseResult;
     }
 
-    // const [newLines, changed] = fixIndices(data.lines, parseResult);
-    // if (changed) {
-    //     data.editor.edit(editBuilder => {
-    //         editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'))
-    //     });
-    // }
     const changes = fixIndicesSurgical(data.lines, parseResult);
     const changed = changes.length > 0;
     if (changed) {
@@ -276,9 +256,89 @@ function srtFixIndices(data: SrtEditorData) {
     }
 }
 
+function subSort(lines: string[], subs: Subtitle[]): string[] {
+    subs.sort((a, b) => a.start_ms - b.start_ms);
+
+    const newLines: string[] = [];
+    let index = 1;
+    for (const sub of subs) {
+        const startLine = sub.line_pos;
+        newLines.push(index.toString());
+        for (let i = startLine + 1; i < startLine + 2 + sub.line_lengths.length; i++) {
+            newLines.push(lines[i]);
+        }
+        newLines.push("");
+        index++;
+    }
+    return newLines;
+}
+
+function srtSort(data: SrtEditorData, subs: Subtitle[]) {
+    const sorted = subSort(data.lines, subs);
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), sorted.join('\n'))
+    });
+}
+
+function fixTiming(
+    lines: string[],
+    subs: Subtitle[],
+    i: number,
+    config: vscode.WorkspaceConfiguration): [string[] | null, string | null] {
+
+    const minPause = config.get("minPause") as number;
+    const minDuration = config.get("minDuration") as number;
+    const fixBadMinPause = config.get("fixBadMinPause") as boolean;
+    const fixWithMinPause = config.get("fixWithMinPause") as boolean;
+
+    const newLines = lines.slice();
+    const sub = subs[i];
+    const next = subs[i + 1];
+    console.log({ minPause, minDuration, i, fixBadMinPause, fixWithMinPause });
+    if (sub.start_ms > sub.end_ms) {
+        return [null, `Subtitle ${sub.index} has a negative duration`]
+    } else if (sub.end_ms > next.start_ms ||
+        (fixBadMinPause && sub.end_ms > next.start_ms - minPause)) {
+        let mp = 0;
+        if (fixWithMinPause) {
+            mp = minPause;
+        }
+        const new_end = next.start_ms - mp;
+
+        if (new_end - sub.start_ms >= minDuration) {
+            const dur_line = makeDurFullMS(sub.start_ms, new_end);
+            newLines[sub.line_pos + 1] = dur_line;
+        } else {
+            return [null, `Can't shrink subtitle ${sub.index}, would break minimum duration`];
+        }
+        return [newLines, null];
+    } else {
+        return [null, null];
+    }
+}
+
+function srtFixTiming(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
+    if (sub_i != subs.length) {
+        const sub = subs[sub_i];
+        const [fix, error] = fixTiming(data.lines, subs, sub_i, data.config);
+        if (fix) {
+            vscode.window.showInformationMessage(`Fixed timing for subtitle ${sub.index}`);
+            data.editor.edit(editBuilder => {
+                editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), fix.join('\n'))
+            });
+        } else if (error) {
+            vscode.window.showErrorMessage(error);
+        } else {
+            vscode.window.showInformationMessage(`Nothing to fix for subtitle ${sub.index}`);
+        }
+    }
+}
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
     context.subscriptions.push(defineCommandSubtitle("split", srtSplit));
     context.subscriptions.push(defineCommand("fixIndices", srtFixIndices));
+    context.subscriptions.push(defineCommandSubs("sort", srtSort));
+    context.subscriptions.push(defineCommandSubtitle("fixTiming", srtFixTiming));
 }
