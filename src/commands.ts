@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { findSubtitle, getData, getLines, ParseError, parseSubtitles, SrtEditorData } from "./get_subs";
+import { findSubtitle, getData, ParseError, parseSubtitles, SrtEditorData } from "./get_subs";
 import { makeDurFullMS, Subtitle } from "./subtitle";
 
 function p(line: number, col: number): vscode.Position {
@@ -120,13 +120,15 @@ function srtMerge(data: SrtEditorData, subs: Subtitle[]) {
     for (let i = sub_first; i < sub_last; i++) {
         const result = parseSubtitles(newLines);
         if (result instanceof ParseError) {
-            vscode.window.showErrorMessage(`Unexpected error on line ${result.line}: ${result.error}`);
+            vscode.window.showErrorMessage(
+                `Unexpected error on line ${result.line}: ${result.error}`);
             return;
         }
         newLines = subMerge(newLines, result, sub_first);
     }
     data.editor.edit(editBuilder => {
-        editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'));
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'));
     });
 }
 
@@ -197,7 +199,8 @@ async function srtSplit(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     lines = lines.concat(new_header).concat(after);
 
     data.editor.edit(editBuilder => {
-        editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'))
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'))
     });
 }
 
@@ -276,7 +279,8 @@ function subSort(lines: string[], subs: Subtitle[]): string[] {
 function srtSort(data: SrtEditorData, subs: Subtitle[]) {
     const sorted = subSort(data.lines, subs);
     data.editor.edit(editBuilder => {
-        editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), sorted.join('\n'))
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), sorted.join('\n'))
     });
 }
 
@@ -323,7 +327,8 @@ function srtFixTiming(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
         if (fix) {
             vscode.window.showInformationMessage(`Fixed timing for subtitle ${sub.index}`);
             data.editor.edit(editBuilder => {
-                editBuilder.replace(lineRangeN(data.editor, 0, data.editor.document.lineCount), fix.join('\n'))
+                editBuilder.replace(
+                    lineRangeN(data.editor, 0, data.editor.document.lineCount), fix.join('\n'))
             });
         } else if (error) {
             vscode.window.showErrorMessage(error);
