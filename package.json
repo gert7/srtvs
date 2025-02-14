@@ -38,6 +38,10 @@
       {
         "command": "srt-subrip.fixTiming",
         "title": "Fix timing for the current subtitle"
+      },
+      {
+        "command": "srt-subrip.fixTimingAll",
+        "title": "Fix timing for all subtitles"
       }
     ],
     "configuration": {

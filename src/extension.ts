@@ -33,7 +33,6 @@ export function activate(context: vscode.ExtensionContext) {
 				event.document.languageId == 'subrip') {
 				const config = vscode.workspace.getConfiguration(EXT_NAME);
 				const autofixIndex = config.get("autofixIndex") as boolean;
-				console.log(autofixIndex);
 				if (autofixIndex) {
 					const editor =
 						vscode.window.visibleTextEditors.find(

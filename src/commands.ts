@@ -291,10 +291,8 @@ function fixTiming(
     const fixBadMinPause = config.get("fixBadMinPause") as boolean;
     const fixWithMinPause = config.get("fixWithMinPause") as boolean;
 
-    const newLines = lines.slice();
     const sub = subs[i];
     const next = subs[i + 1];
-    console.log({ minPause, minDuration, i, fixBadMinPause, fixWithMinPause });
     if (sub.start_ms > sub.end_ms) {
         return [null, `Subtitle ${sub.index} has a negative duration`]
     } else if (sub.end_ms > next.start_ms ||
@@ -307,11 +305,11 @@ function fixTiming(
 
         if (new_end - sub.start_ms >= minDuration) {
             const dur_line = makeDurFullMS(sub.start_ms, new_end);
-            newLines[sub.line_pos + 1] = dur_line;
+            lines[sub.line_pos + 1] = dur_line;
         } else {
             return [null, `Can't shrink subtitle ${sub.index}, would break minimum duration`];
         }
-        return [newLines, null];
+        return [lines, null];
     } else {
         return [null, null];
     }
@@ -320,7 +318,8 @@ function fixTiming(
 function srtFixTiming(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     if (sub_i != subs.length) {
         const sub = subs[sub_i];
-        const [fix, error] = fixTiming(data.lines, subs, sub_i, data.config);
+        const newLines = data.lines.slice();
+        const [fix, error] = fixTiming(newLines, subs, sub_i, data.config);
         if (fix) {
             vscode.window.showInformationMessage(`Fixed timing for subtitle ${sub.index}`);
             data.editor.edit(editBuilder => {
@@ -334,6 +333,28 @@ function srtFixTiming(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     }
 }
 
+function srtFixTimingAll(data: SrtEditorData, subs: Subtitle[]) {
+    let count = 0;
+    const newLines = data.lines.slice();
+    for (let i = 0; i < subs.length - 1; i++) {
+        const [fix, error] = fixTiming(newLines, subs, i, data.config);
+        if (fix) {
+            count++;
+        } else if (error) {
+            vscode.window.showWarningMessage(error);
+        }
+    }
+    if (count > 0) {
+        data.editor.edit(editBuilder => {
+            editBuilder.replace(
+                lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'))
+        });
+        vscode.window.showInformationMessage(`Fixed timings for ${count} subtitles`);
+    } else {
+        vscode.window.showInformationMessage("No timings to fix");
+    }
+}
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -341,4 +362,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommand("fixIndices", srtFixIndices));
     context.subscriptions.push(defineCommandSubs("sort", srtSort));
     context.subscriptions.push(defineCommandSubtitle("fixTiming", srtFixTiming));
+    context.subscriptions.push(defineCommandSubs("fixTimingAll", srtFixTimingAll));
 }
