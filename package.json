@@ -45,7 +45,11 @@
       },
       {
         "command": "srt-subrip.shift",
-        "title": "Shift subtitles"
+        "title": "Shift timing for subtitles"
+      },
+      {
+        "command": "srt-subrip.shiftAll",
+        "title": "Shift timing for all subtitles"
       }
     ],
     "configuration": {

@@ -417,6 +417,15 @@ function parseTime(str_in: string): number | null {
     return null;
 }
 
+/**
+ * Shift subtitle timings.
+ * @param lines Subtitle lines
+ * @param subs Array of {@link Subtitle Subtitles}
+ * @param from Start of range of subtitles to shift
+ * @param to End of range of subtitles to shift (exclusive)
+ * @param shift Milliseconds to shift
+ * @returns New lines with shift applied
+ */
 function subShift(
     lines: string[],
     subs: Subtitle[],
@@ -490,6 +499,31 @@ async function srtShift(data: SrtEditorData, subs: Subtitle[]) {
     });
 }
 
+async function srtShiftAll(data: SrtEditorData, subs: Subtitle[]) {
+    let result = await vscode.window.showInputBox({
+        value: '100',
+        placeHolder: "Time to shift",
+        validateInput: text => {
+            return parseTime(text) == null ? shiftWarning : null;
+        }
+    });
+
+    if (result == null) { return; }
+    const shift = parseTime(result);
+    if (shift == null) { return; }
+
+    const [lines, err] = subShift(data.lines, subs, 0, subs.length, shift);
+    if (err != null) {
+        vscode.window.showErrorMessage(err);
+        return;
+    }
+
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'))
+    });
+}
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -499,4 +533,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("fixTiming", srtFixTiming));
     context.subscriptions.push(defineCommandSubs("fixTimingAll", srtFixTimingAll));
     context.subscriptions.push(defineCommandSubs("shift", srtShift));
+    context.subscriptions.push(defineCommandSubs("shiftAll", srtShiftAll));
 }
