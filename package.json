@@ -42,6 +42,10 @@
       {
         "command": "srt-subrip.fixTimingAll",
         "title": "Fix timing for all subtitles"
+      },
+      {
+        "command": "srt-subrip.shift",
+        "title": "Shift subtitles"
       }
     ],
     "configuration": {

@@ -52,6 +52,19 @@ export function parseFullTiming(line: string): number[] | null[] {
     )]
 }
 
+export function makeDur(h: number, m: number, s: number, mi: number): string {
+    const nh = h.toString().padStart(2, "0");
+    const nm = m.toString().padStart(2, "0");
+    const ns = s.toString().padStart(2, "0");
+    const nmi = mi.toString().padStart(2, "0");
+    return `${nh}:${nm}:${ns},${nmi}`;
+}
+
+export function makeDurMS(ms: number): string {
+    const [h, m, s, mi] = from_ms(ms);
+    return makeDur(h, m, s, mi);
+}
+
 export function makeDurFull(
     fh: number,
     fm: number,

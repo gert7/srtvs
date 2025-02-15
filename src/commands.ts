@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { findSubtitle, getData, ParseError, parseSubtitles, SrtEditorData } from "./get_subs";
-import { makeDurFullMS, Subtitle } from "./subtitle";
+import { makeDurFullMS, makeDurMS, Subtitle, to_ms } from "./subtitle";
 
 function p(line: number, col: number): vscode.Position {
     return new vscode.Position(line, col);
@@ -360,6 +360,136 @@ function srtFixTimingAll(data: SrtEditorData, subs: Subtitle[]) {
     }
 }
 
+function parseTime(str_in: string): number | null {
+    let str = str_in;
+    let mul = 1;
+    if (str[0] == '-') {
+        mul = -1;
+        str = str.substring(1);
+    }
+    else if (str[0] == '+') {
+        str = str.substring(1);
+    }
+
+    if (/^\d+$/.test(str)) {
+        return parseInt(str) * mul;
+    }
+
+    const hmsmi = str.match(/^(\d+):(\d+):(\d+),(\d+)$/);
+    if (hmsmi != null) {
+        const h = parseInt(hmsmi[1]);
+        const m = parseInt(hmsmi[2]);
+        const s = parseInt(hmsmi[3]);
+        const mi = parseInt(hmsmi[4]);
+        return to_ms(h, m, s, mi) * mul;
+    }
+
+    const msmi = str.match(/^(\d+):(\d+),(\d+)$/);
+    if (msmi != null) {
+        const m = parseInt(msmi[1]);
+        const s = parseInt(msmi[2]);
+        const mi = parseInt(msmi[3]);
+        return to_ms(0, m, s, mi) * mul;
+    }
+
+    const smi = str.match(/^(\d+),(\d+)$/);
+    if (smi != null) {
+        const s = parseInt(smi[1]);
+        const mi = parseInt(smi[2]);
+        return to_ms(0, 0, s, mi) * mul;
+    }
+
+    const hms = str.match(/^(\d+):(\d+):(\d+)$/);
+    if (hms != null) {
+        const h = parseInt(hms[1]);
+        const m = parseInt(hms[2]);
+        const s = parseInt(hms[3]);
+        return to_ms(h, m, s, 0) * mul;
+    }
+
+    const ms = str.match(/^(\d+):(\d+)$/);
+    if (ms != null) {
+        const m = parseInt(ms[1]);
+        const s = parseInt(ms[2]);
+        return to_ms(0, m, s, 0) * mul;
+    }
+
+    return null;
+}
+
+function subShift(
+    lines: string[],
+    subs: Subtitle[],
+    from: number,
+    to: number,
+    shift: number): [string[], string | null] {
+    const newLines = lines.slice();
+    if (to == -1) {
+        to = subs.length - 1;
+    }
+    for (let i = from; i < to; i++) {
+        const sub = subs[i];
+        const new_start = sub.start_ms + shift;
+        const new_end = sub.end_ms + shift;
+
+        if (new_start < 0 || new_end < 0) {
+            const over = 0 - new_start;
+            const over_fmt = makeDurMS(over);
+            return [lines, `Can't shift subtitle ${sub.index} before 0. Over by ${over_fmt}`];
+        }
+
+        newLines[sub.line_pos + 1] = makeDurFullMS(new_start, new_end);
+    }
+    return [newLines, null];
+}
+
+const shiftWarning =
+    "Provide a valid time, e.g. 1000, 01:02, 01:02:03, 01:02:03,123, 01:02,123, 01,123";
+
+async function srtShift(data: SrtEditorData, subs: Subtitle[]) {
+    const sub_first = findSubtitle(subs, data.line);
+    if (sub_first == null) {
+        vscode.window.showWarningMessage("Not in a subtitle");
+        return;
+    }
+
+    let sub_last = sub_first;
+    if (data.line != data.endLine) {
+        sub_last = findSubtitle(subs, data.endLine) || sub_first;
+    }
+
+    let result = await vscode.window.showInputBox({
+        value: '100',
+        placeHolder: "Time to shift",
+        validateInput: text => {
+            return parseTime(text) == null ? shiftWarning : null;
+        }
+    });
+
+    if (result == null) { return; }
+    const shift = parseTime(result);
+    if (shift == null) { return; }
+
+    const [lines, err] = subShift(data.lines, subs, sub_first, sub_last + 1, shift);
+    if (err != null) {
+        vscode.window.showErrorMessage(err);
+        return;
+    }
+
+    const parseResult = parseSubtitles(lines);
+    if (parseResult instanceof ParseError) {
+        console.error(result);
+        vscode.window.showErrorMessage(result.toString());
+        return;
+    }
+    const sortedLines = subSort(lines, parseResult);
+
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), sortedLines.join('\n'))
+    });
+}
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -368,4 +498,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubs("sort", srtSort));
     context.subscriptions.push(defineCommandSubtitle("fixTiming", srtFixTiming));
     context.subscriptions.push(defineCommandSubs("fixTimingAll", srtFixTimingAll));
+    context.subscriptions.push(defineCommandSubs("shift", srtShift));
 }
