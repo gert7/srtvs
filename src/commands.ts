@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { findSubtitle, getData, ParseError, parseSubtitles, SrtEditorData } from "./get_subs";
 import { makeDurFullMS, makeDurMS, Subtitle, to_ms } from "./subtitle";
+import { readFile } from "fs/promises";
 
 function p(line: number, col: number): vscode.Position {
     return new vscode.Position(line, col);
@@ -524,6 +525,85 @@ async function srtShiftAll(data: SrtEditorData, subs: Subtitle[]) {
     });
 }
 
+function subImport(
+    lines: string[],
+    subs: Subtitle[],
+    offset_abs: number): string[] | ParseError { 
+    const new_lines = lines.slice();
+    for (const new_sub of subs) {
+        const new_start = new_sub.start_ms + offset_abs;
+        const new_end = new_sub.end_ms + offset_abs;
+        new_lines[new_sub.line_pos + 1] = makeDurFullMS(new_start, new_end);
+    }
+
+    const result = lines.concat(new_lines);
+    const parseResult = parseSubtitles(result);
+    if (parseResult instanceof ParseError) {
+        return parseResult;
+    }
+    return subSort(result, parseResult);
+}
+
+async function srtImport(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
+    const sub = subs[sub_i];
+    const options: vscode.OpenDialogOptions = {
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: "Select a SubRip file",
+        filters: {
+            'SubRip files': ['srt'],
+        }
+    };
+    const fileURI = await vscode.window.showOpenDialog(options);
+
+    if (fileURI != null && fileURI.length > 0) {
+        vscode.window.showInformationMessage(`Selected file: ${fileURI[0].fsPath}`);
+    } else {
+        return;
+    }
+
+    let srt;
+    try {
+        srt = await vscode.workspace.openTextDocument(fileURI[0]);
+    } catch (e) {
+        if (e instanceof Error) {
+            vscode.window.showErrorMessage(e.message);
+        }
+        return;
+    }
+    const lines = srt.getText().replace(/\r\n/g, '\n').split('\n');
+    const parseResult = parseSubtitles(lines);
+    if (parseResult instanceof ParseError) {
+        console.error(parseResult);
+        vscode.window.showErrorMessage(parseResult.toString());
+        return;
+    }
+
+    let result = await vscode.window.showInputBox({
+        value: '100',
+        placeHolder: "Time to shift",
+        validateInput: text => {
+            return parseTime(text) == null ? shiftWarning : null;
+        }
+    });
+
+    if (result == null) { return; }
+    const shift = parseTime(result);
+    if (shift == null) { return; }
+
+    const offset = sub.end_ms + shift;
+    const withImport = subImport(lines, parseResult, offset);
+    if (withImport instanceof ParseError) {
+        vscode.window.showErrorMessage(`Error appears after successful import: ${withImport}`);
+        return;
+    }
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), withImport.join('\n'))
+    });
+}
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -534,4 +614,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubs("fixTimingAll", srtFixTimingAll));
     context.subscriptions.push(defineCommandSubs("shift", srtShift));
     context.subscriptions.push(defineCommandSubs("shiftAll", srtShiftAll));
+    context.subscriptions.push(defineCommandSubtitle("import", srtImport));
 }

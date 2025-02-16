@@ -173,7 +173,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 
 			if (overlapWarning && pause < 0) {
 				add_error(pauseline + 1, "Subtitle overlaps with previous subtitle");
-			} else if (pause < minPause) {
+			} else if (pauseline > 0 && pause < minPause) {
 				add_error(pauseline + 1, "Pause is too short");
 			}
 			state = State.Subtitle;
