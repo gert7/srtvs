@@ -453,10 +453,11 @@ function subShift(
     return [newLines, null];
 }
 
-const shiftWarning =
+const shiftExplainer =
     "Provide a valid time, e.g. 1000, 01:02, 01:02:03, 01:02:03,123, 01:02,123, 01,123";
 
 async function srtShift(data: SrtEditorData, subs: Subtitle[]) {
+    const defShift = data.config.get("shiftMS") as number;
     const sub_first = findSubtitle(subs, data.line);
     if (sub_first == null) {
         vscode.window.showWarningMessage("Not in a subtitle");
@@ -469,10 +470,10 @@ async function srtShift(data: SrtEditorData, subs: Subtitle[]) {
     }
 
     let result = await vscode.window.showInputBox({
-        value: '100',
+        value: defShift.toString(),
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftWarning : null;
+            return parseTime(text) == null ? shiftExplainer : null;
         }
     });
 
@@ -501,11 +502,12 @@ async function srtShift(data: SrtEditorData, subs: Subtitle[]) {
 }
 
 async function srtShiftAll(data: SrtEditorData, subs: Subtitle[]) {
+    const defShift = data.config.get("shiftMS") as number;
     let result = await vscode.window.showInputBox({
-        value: '100',
+        value: defShift.toString(),
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftWarning : null;
+            return parseTime(text) == null ? shiftExplainer : null;
         }
     });
 
@@ -545,6 +547,7 @@ function subImport(
 }
 
 async function srtImport(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
+    const defPause = data.config.get("minPause") as number;
     const sub = subs[sub_i];
     const options: vscode.OpenDialogOptions = {
         canSelectFiles: true,
@@ -581,10 +584,10 @@ async function srtImport(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     }
 
     let result = await vscode.window.showInputBox({
-        value: '100',
+        value: defPause.toString(),
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftWarning : null;
+            return parseTime(text) == null ? shiftExplainer : null;
         }
     });
 
@@ -593,6 +596,65 @@ async function srtImport(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     if (shift == null) { return; }
 
     const offset = sub.end_ms + shift;
+    const withImport = subImport(lines, parseResult, offset);
+    if (withImport instanceof ParseError) {
+        vscode.window.showErrorMessage(`Error appears after successful import: ${withImport}`);
+        return;
+    }
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), withImport.join('\n'))
+    });
+}
+
+async function srtImportAbsolute(data: SrtEditorData, subs: Subtitle[]) {
+    const options: vscode.OpenDialogOptions = {
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: "Select a SubRip file",
+        filters: {
+            'SubRip files': ['srt'],
+        }
+    };
+    const fileURI = await vscode.window.showOpenDialog(options);
+
+    if (fileURI != null && fileURI.length > 0) {
+        vscode.window.showInformationMessage(`Selected file: ${fileURI[0].fsPath}`);
+    } else {
+        return;
+    }
+
+    let srt;
+    try {
+        srt = await vscode.workspace.openTextDocument(fileURI[0]);
+    } catch (e) {
+        if (e instanceof Error) {
+            vscode.window.showErrorMessage(e.message);
+        }
+        return;
+    }
+    const lines = srt.getText().replace(/\r\n/g, '\n').split('\n');
+    const parseResult = parseSubtitles(lines);
+    if (parseResult instanceof ParseError) {
+        console.error(parseResult);
+        vscode.window.showErrorMessage(parseResult.toString());
+        return;
+    }
+
+    let result = await vscode.window.showInputBox({
+        value: '0',
+        placeHolder: "Time to shift",
+        validateInput: text => {
+            return parseTime(text) == null ? shiftExplainer : null;
+        }
+    });
+
+    if (result == null) { return; }
+    const shift = parseTime(result);
+    if (shift == null) { return; }
+
+    const offset = shift;
     const withImport = subImport(lines, parseResult, offset);
     if (withImport instanceof ParseError) {
         vscode.window.showErrorMessage(`Error appears after successful import: ${withImport}`);
@@ -615,4 +677,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubs("shift", srtShift));
     context.subscriptions.push(defineCommandSubs("shiftAll", srtShiftAll));
     context.subscriptions.push(defineCommandSubtitle("import", srtImport));
+    context.subscriptions.push(defineCommandSubs("importAbsolute", srtImportAbsolute));
 }

@@ -54,6 +54,10 @@
       {
         "command": "srt-subrip.import",
         "title": "Import subtitles after current subtitle"
+      },
+      {
+        "command": "srt-subrip.importAbsolute",
+        "title": "Import subtitles with optional offset from start"
       }
     ],
     "configuration": {
@@ -143,6 +147,11 @@
           "type": "boolean",
           "default": true,
           "description": "Fix non-overlapping subtitles if pause is less than the minimum pause when fixing timings"
+        },
+        "srt-subrip.shiftMS": {
+          "type": "number",
+          "default": 100,
+          "description": "Default time in milliseconds for shift commands"
         }
       }
     },
