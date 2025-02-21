@@ -66,6 +66,14 @@
       {
         "command": "srt-subrip.shiftTime",
         "title": "Shift either the start or end time of a subtitle"
+      },
+      {
+        "command": "srt-subrip.enforce",
+        "title": "Enforce start or end of subtitle on adjacent subtitle"
+      },
+      {
+        "command": "srt-subrip.shiftTimeStrict",
+        "title": "Shift the start or end of a subtitle with enforcement"
       }
     ],
     "configuration": {

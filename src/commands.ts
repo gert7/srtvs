@@ -763,6 +763,152 @@ async function srtShiftTime(data: SrtEditorData, subs: Subtitle[], sub_i: number
 }
 
 
+function srtEnforce(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
+    const minPause = data.config.get("minPause") as number;
+    const sub = subs[sub_i];
+    if (data.line != sub.line_pos + 1) {
+        vscode.window.showErrorMessage("Not on duration line");
+        return;
+    }
+
+    if (data.col >= 0 && data.col <= 12) {
+        if (sub_i == 0) {
+            vscode.window.showInformationMessage("Can't apply this on the first subtitle");
+            return;
+        }
+        const sub_prev = subs[sub_i - 1];
+
+        const prev_end_ms = sub_prev.end_ms;
+        const curr_start_ms = sub.start_ms;
+
+        const new_ms = curr_start_ms - minPause;
+        if (new_ms >= prev_end_ms) {
+            vscode.window.showInformationMessage("Nothing to be done");
+            return;
+        }
+        if (new_ms < sub_prev.start_ms) {
+            vscode.window.showInformationMessage("Would shrink previous subtitle beyond start time");
+            return;
+        }
+
+        const prev_line = sub_prev.line_pos + 1;
+        const new_timing = amendEnd(data.lines[prev_line], new_ms);
+        data.editor.edit(editBuilder => {
+            editBuilder.replace(
+                lineRangeN(data.editor, prev_line, prev_line + 1), new_timing);
+        });
+    } else if (data.col >= 16 && data.col <= 28) {
+        if (sub_i >= subs.length - 1) {
+            vscode.window.showInformationMessage("Can't apply this on the last subtitle");
+            return;
+        }
+        const sub_next = subs[sub_i + 1];
+
+        const next_start_ms = sub_next.start_ms;
+        const curr_end_ms = sub.end_ms;
+
+        const new_ms = curr_end_ms + minPause;
+        if (new_ms <= next_start_ms) {
+            vscode.window.showInformationMessage("Nothing to be done");
+            return;
+        }
+        if (new_ms > sub_next.end_ms) {
+            vscode.window.showInformationMessage("Would shrink next subtitle beyond end time");
+            return;
+        }
+
+        const next_line = sub_next.line_pos + 1;
+        const new_timing = amendStart(data.lines[next_line], new_ms);
+        data.editor.edit(editBuilder => {
+            editBuilder.replace(
+                lineRangeN(data.editor, next_line, next_line + 1), new_timing);
+        });
+    }
+}
+
+
+async function srtShiftTimeStrict(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
+    const sub = subs[sub_i];
+    if (data.line != sub.line_pos + 1) {
+        vscode.window.showErrorMessage("Not on duration line");
+        return;
+    }
+
+    const minPause = data.config.get("minPause") as number;
+    const shiftMS = data.config.get("shiftMS") as number;
+
+    let result = await vscode.window.showInputBox({
+        value: shiftMS.toString(),
+        placeHolder: "Time to shift",
+        validateInput: text => {
+            return parseTime(text) == null ? shiftExplainer : null;
+        }
+    });
+
+    if (result == null) { return; }
+    const offset = parseTime(result);
+    if (offset == null) { return; }
+
+    const lines = data.lines.slice();
+
+    if (data.col >= 0 && data.col <= 12) {
+        const new_ms = sub.start_ms + offset;
+        if (new_ms < 0) {
+            vscode.window.showErrorMessage("Start time cannot be negative");
+            return;
+        }
+
+        if (sub_i > 1) {
+            const sub_prev = subs[sub_i - 1];
+
+            const bleed = sub_prev.end_ms + minPause;
+
+            if (new_ms < bleed) {
+                const new_prev_ms = new_ms - minPause;
+                if (new_prev_ms < sub_prev.start_ms) {
+                    vscode.window.showErrorMessage("Would shrink previous subtitle beyond start time");
+                    return;
+                }
+                const new_timing = amendEnd(data.lines[sub_prev.line_pos + 1], new_prev_ms);
+                lines[sub_prev.line_pos + 1] = new_timing;
+            }
+        }
+
+        const new_timing = amendStart(data.lines[sub.line_pos + 1], new_ms);
+        lines[sub.line_pos + 1] = new_timing;
+        data.editor.edit(editBuilder => {
+            editBuilder.replace(
+                lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'));
+        });
+    } else if (data.col >= 16 && data.col <= 28) {
+        const new_ms = sub.end_ms + offset;
+
+        if (sub_i < subs.length - 1) {
+            const sub_next = subs[sub_i + 1];
+
+            const bleed = sub_next.start_ms - minPause;
+
+            if (new_ms > bleed) {
+                const new_next_ms = new_ms + minPause;
+                if (new_next_ms > sub_next.end_ms) {
+                    vscode.window.showErrorMessage("Would shrink next subtitle beyond end time");
+                    return;
+                }
+                const new_timing = amendStart(data.lines[sub_next.line_pos + 1], new_next_ms);
+                lines[sub_next.line_pos + 1] = new_timing;
+            }
+        }
+
+        const new_timing = amendEnd(data.lines[sub.line_pos + 1], new_ms);
+        lines[sub.line_pos + 1] = new_timing;
+        data.editor.edit(editBuilder => {
+            editBuilder.replace(
+                lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'));
+        });
+    }
+}
+
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -777,4 +923,6 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubs("importAbsolute", srtImportAbsolute));
     context.subscriptions.push(defineCommandSubtitle("add", srtAdd));
     context.subscriptions.push(defineCommandSubtitle("shiftTime", srtShiftTime));
+    context.subscriptions.push(defineCommandSubtitle("enforce", srtEnforce));
+    context.subscriptions.push(defineCommandSubtitle("shiftTimeStrict", srtShiftTimeStrict));
 }
