@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { findSubtitle, getData, ParseError, parseSubtitles, SrtEditorData } from "./get_subs";
-import { makeDurFullMS, makeDurMS, Subtitle, to_ms } from "./subtitle";
+import { amendEnd, amendStart, makeDurFullMS, makeDurMS, Subtitle, to_ms } from "./subtitle";
 import { readFile } from "fs/promises";
 
 function p(line: number, col: number): vscode.Position {
@@ -712,6 +712,57 @@ async function srtAdd(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
 }
 
 
+async function srtShiftTime(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
+    const sub = subs[sub_i];
+    const timing_line = sub.line_pos + 1;
+    if (data.line != timing_line) {
+        vscode.window.showErrorMessage("Not on duration line");
+        return;
+    }
+
+    const shiftMS = data.config.get("shiftMS") as number;
+
+    let result = await vscode.window.showInputBox({
+        value: shiftMS.toString(),
+        placeHolder: "Time to shift",
+        validateInput: text => {
+            return parseTime(text) == null ? shiftExplainer : null;
+        }
+    });
+
+    if (result == null) { return; }
+    const offset = parseTime(result);
+    if (offset == null) { return; }
+
+    if (data.col >= 0 && data.col <= 12) {
+        const new_ms = sub.start_ms + offset;
+        if (new_ms < 0) {
+            vscode.window.showErrorMessage("Start time cannot be negative");
+            return;
+        }
+
+        const new_timing = amendStart(data.lines[timing_line], new_ms);
+        data.editor.edit(editBuilder => {
+            editBuilder.replace(
+                lineRangeN(data.editor, timing_line, timing_line + 1), new_timing);
+        });
+    } else if (data.col >= 16 && data.col <= 28) {
+        const new_ms = sub.end_ms + offset;
+        if (new_ms < 0) {
+            vscode.window.showErrorMessage("End time cannot be negative");
+            return;
+        }
+
+        const new_timing = amendEnd(data.lines[timing_line], new_ms);
+        vscode.window.showInformationMessage(new_timing);
+        data.editor.edit(editBuilder => {
+            editBuilder.replace(
+                lineRangeN(data.editor, timing_line, timing_line + 1), new_timing);
+        });
+    }
+}
+
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -725,4 +776,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("import", srtImport));
     context.subscriptions.push(defineCommandSubs("importAbsolute", srtImportAbsolute));
     context.subscriptions.push(defineCommandSubtitle("add", srtAdd));
+    context.subscriptions.push(defineCommandSubtitle("shiftTime", srtShiftTime));
 }

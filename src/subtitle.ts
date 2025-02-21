@@ -56,7 +56,7 @@ export function makeDur(h: number, m: number, s: number, mi: number): string {
     const nh = h.toString().padStart(2, "0");
     const nm = m.toString().padStart(2, "0");
     const ns = s.toString().padStart(2, "0");
-    const nmi = mi.toString().padStart(2, "0");
+    const nmi = mi.toString().padStart(3, "0");
     return `${nh}:${nm}:${ns},${nmi}`;
 }
 
@@ -89,4 +89,16 @@ export function makeDurFullMS(fms: number, tms: number): string {
     const [fh, fm, fs, fmi] = from_ms(fms);
     const [th, tm, ts, tmi] = from_ms(tms);
     return makeDurFull(fh, fm, fs, fmi, th, tm, ts, tmi);
+}
+
+export function amendStart(line: string, new_ms: number) {
+    const end_time = line.substring(12, 29);
+    const start_time = makeDurMS(new_ms);
+    return `${start_time}${end_time}`;
+}
+
+export function amendEnd(line: string, new_ms: number) {
+    const start_time = line.substring(0, 17);
+    const end_time = makeDurMS(new_ms);
+    return `${start_time}${end_time}`;
 }

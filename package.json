@@ -62,6 +62,10 @@
       {
         "command": "srt-subrip.add",
         "title": "Add new empty subtitle"
+      },
+      {
+        "command": "srt-subrip.shiftTime",
+        "title": "Shift either the start or end time of a subtitle"
       }
     ],
     "configuration": {
