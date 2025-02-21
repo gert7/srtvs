@@ -58,6 +58,10 @@
       {
         "command": "srt-subrip.importAbsolute",
         "title": "Import subtitles with optional offset from start"
+      },
+      {
+        "command": "srt-subrip.add",
+        "title": "Add new empty subtitle"
       }
     ],
     "configuration": {

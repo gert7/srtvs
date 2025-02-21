@@ -666,6 +666,52 @@ async function srtImportAbsolute(data: SrtEditorData, subs: Subtitle[]) {
     });
 }
 
+
+async function srtAdd(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
+    const minPause = data.config.get("minPause") as number;
+    const minDuration = data.config.get("minDuration") as number;
+    const lines = data.lines.slice();
+    let result = await vscode.window.showInputBox({
+        value: minPause.toString(),
+        placeHolder: "Pause time",
+        validateInput: text => {
+            return parseTime(text) == null ? shiftExplainer : null;
+        }
+    });
+
+    if (result == null) { return; }
+    const offset = parseTime(result);
+    if (offset == null) { return; }
+
+    const sub = subs[sub_i];
+    const new_line = sub.line_pos + 2 + sub.line_lengths.length;
+    const new_start = sub.end_ms + offset;
+    const new_end = new_start + minDuration;
+
+    const new_header = [
+        "",
+        (sub.index + 1).toString(),
+        makeDurFullMS(new_start, new_end)
+    ];
+
+    const end = lines.splice(new_line);
+    const new_lines = lines.concat(new_header).concat(end);
+
+    const parseResult = parseSubtitles(new_lines);
+    if (parseResult instanceof ParseError) {
+        console.error(result);
+        vscode.window.showErrorMessage(result.toString());
+        return;
+    }
+    const sortedLines = subSort(new_lines, parseResult);
+
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), sortedLines.join('\n'));
+    });
+}
+
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -678,4 +724,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubs("shiftAll", srtShiftAll));
     context.subscriptions.push(defineCommandSubtitle("import", srtImport));
     context.subscriptions.push(defineCommandSubs("importAbsolute", srtImportAbsolute));
+    context.subscriptions.push(defineCommandSubtitle("add", srtAdd));
 }
