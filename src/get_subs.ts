@@ -168,7 +168,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 			const pauseline = i - 3;
 
 			if (showPause && pauseline > 0) {
-				add_hint(pauseline + 1, "                 (" + fmtS(pause) + ")");
+				add_hint(pauseline + 1, "                                 (" + fmtS(pause) + ")");
 			}
 
 			if (overlapWarning && pause < 0) {

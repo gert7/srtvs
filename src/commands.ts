@@ -941,6 +941,28 @@ function srtSwap(data: SrtEditorData, subs: Subtitle[], sub_in: number) {
 }
 
 
+async function srtJump(data: SrtEditorData, subs: Subtitle[]) {
+    const result = await vscode.window.showInputBox({
+        placeHolder: "Time to shift",
+        validateInput: text => {
+            return isNaN(parseInt(text)) ? "Must be an integer" : null;
+        }
+    });
+
+    if (result == null) { return; }
+    const i = parseInt(result);
+    if (subs.length < i) {
+        vscode.window.showErrorMessage(`No subtitle with index ${i}`);
+        return;
+    }
+
+    const line = subs[i - 1].line_pos;
+    data.editor.selection = new vscode.Selection(p(line, 0), p(line, 0));
+    const range = lineRange(line, line);
+    data.editor.revealRange(range, vscode.TextEditorRevealType.InCenter)
+}
+
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -958,4 +980,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("enforce", srtEnforce));
     context.subscriptions.push(defineCommandSubtitle("shiftTimeStrict", srtShiftTimeStrict));
     context.subscriptions.push(defineCommandSubtitle("swap", srtSwap));
+    context.subscriptions.push(defineCommandSubs("jump", srtJump));
 }

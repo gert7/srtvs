@@ -17,67 +17,71 @@
     "commands": [
       {
         "command": "srt-subrip.echo",
-        "title": "Echo current subtitle"
+        "title": "srt: Echo current subtitle"
       },
       {
         "command": "srt-subrip.merge",
-        "title": "Merge subtitles"
+        "title": "srt: Merge subtitles"
       },
       {
         "command": "srt-subrip.split",
-        "title": "Split subtitles"
+        "title": "srt: Split subtitles"
       },
       {
         "command": "srt-subrip.fixIndices",
-        "title": "Fix indices for all subtitles"
+        "title": "srt: Fix indices for all subtitles"
       },
       {
         "command": "srt-subrip.sort",
-        "title": "Sort subtitles by start time"
+        "title": "srt: Sort subtitles by start time"
       },
       {
         "command": "srt-subrip.fixTiming",
-        "title": "Fix timing for the current subtitle"
+        "title": "srt: Fix timing for the current subtitle"
       },
       {
         "command": "srt-subrip.fixTimingAll",
-        "title": "Fix timing for all subtitles"
+        "title": "srt: Fix timing for all subtitles"
       },
       {
         "command": "srt-subrip.shift",
-        "title": "Shift timing for subtitles"
+        "title": "srt: Shift timing for subtitles"
       },
       {
         "command": "srt-subrip.shiftAll",
-        "title": "Shift timing for all subtitles"
+        "title": "srt: Shift timing for all subtitles"
       },
       {
         "command": "srt-subrip.import",
-        "title": "Import subtitles after current subtitle"
+        "title": "srt: Import subtitles after current subtitle"
       },
       {
         "command": "srt-subrip.importAbsolute",
-        "title": "Import subtitles with optional offset from start"
+        "title": "srt: Import subtitles with optional offset from start"
       },
       {
         "command": "srt-subrip.add",
-        "title": "Add new empty subtitle"
+        "title": "srt: Add new empty subtitle"
       },
       {
         "command": "srt-subrip.shiftTime",
-        "title": "Shift either the start or end time of a subtitle"
+        "title": "srt: Shift either the start or end time of a subtitle"
       },
       {
         "command": "srt-subrip.enforce",
-        "title": "Enforce start or end of subtitle on adjacent subtitle"
+        "title": "srt: Enforce start or end of subtitle on adjacent subtitle"
       },
       {
         "command": "srt-subrip.shiftTimeStrict",
-        "title": "Shift the start or end of a subtitle with enforcement"
+        "title": "srt: Shift the start or end of a subtitle with enforcement"
       },
       {
         "command": "srt-subrip.swap",
-        "title": "Swap this subtitle with the one below it"
+        "title": "srt: Swap subtitles"
+      },
+      {
+        "command": "srt-subrip.jump",
+        "title": "srt: Jump to subtitle"
       }
     ],
     "configuration": {
