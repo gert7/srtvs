@@ -909,6 +909,38 @@ async function srtShiftTimeStrict(data: SrtEditorData, subs: Subtitle[], sub_i: 
 }
 
 
+function srtSwap(data: SrtEditorData, subs: Subtitle[], sub_in: number) {
+    let sub_i = sub_in;
+    if (sub_i >= subs.length - 1 && subs.length >= 2) {
+        sub_i = sub_i - 1;
+    } else if (subs.length < 2) {
+        vscode.window.showErrorMessage("Not enough subtitles to swap anything");
+        return;
+    }
+
+    let lines = data.lines.slice();
+
+    const sub2 = subs[sub_i + 1];
+    const text2 = lines.splice(sub2.line_pos + 2, sub2.line_lengths.length);
+
+    const sub1 = subs[sub_i];
+    const text1 = lines.splice(sub1.line_pos + 2, sub1.line_lengths.length);
+
+    const t2s = lines.splice(sub1.line_pos + 2);
+    lines = lines.concat(text2).concat(t2s);
+
+    const diff = sub2.line_lengths.length - sub1.line_lengths.length;
+
+    const t1s = lines.splice(sub2.line_pos + 2 + diff);
+    lines = lines.concat(text1).concat(t1s);
+
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'));
+    });
+}
+
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -925,4 +957,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("shiftTime", srtShiftTime));
     context.subscriptions.push(defineCommandSubtitle("enforce", srtEnforce));
     context.subscriptions.push(defineCommandSubtitle("shiftTimeStrict", srtShiftTimeStrict));
+    context.subscriptions.push(defineCommandSubtitle("swap", srtSwap));
 }

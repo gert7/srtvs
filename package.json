@@ -74,6 +74,10 @@
       {
         "command": "srt-subrip.shiftTimeStrict",
         "title": "Shift the start or end of a subtitle with enforcement"
+      },
+      {
+        "command": "srt-subrip.swap",
+        "title": "Swap this subtitle with the one below it"
       }
     ],
     "configuration": {
