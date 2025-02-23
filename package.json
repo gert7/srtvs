@@ -132,6 +132,26 @@
           "default": 1000,
           "description": "Minimum duration for one subtitle"
         },
+        "srt-subrip.maxDuration": {
+          "type": "number",
+          "default": -1,
+          "description": "Maximum duration for one subtitle (-1 for none)"
+        },
+        "srt-subrip.maxLength": {
+          "type": "number",
+          "default": 40,
+          "description": "Maximum characters per line"
+        },
+        "srt-subrip.maxLengthSub": {
+          "type": "number",
+          "default": -1,
+          "description": "Maximum characters per subtitle"
+        },
+        "srt-subrip.maxLines": {
+          "type": "number",
+          "default": -1,
+          "description": "Maximum number of lines"
+        },
         "srt-subrip.maxCPS": {
           "type": "number",
           "default": 21,
@@ -176,6 +196,11 @@
           "type": "number",
           "default": 100,
           "description": "Default time in milliseconds for shift commands"
+        },
+        "srt-subrip.rulesByLineCount": {
+          "type": "object",
+          "default": {},
+          "description": "Rules based on line count"
         }
       }
     },

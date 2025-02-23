@@ -31,6 +31,53 @@ export function getData(editor_in?: vscode.TextEditor): SrtEditorData | null {
 	}
 }
 
+interface SpecialRules {
+	minDuration: number,
+	maxDuration: number,
+	maxLength: number,
+	maxLengthSub: number
+}
+
+interface SpecialRulesPartial {
+	minDuration: number | undefined,
+	maxDuration: number | undefined,
+	maxLength: number | undefined,
+	maxLengthSub: number | undefined
+}
+
+function buildSpecialRules(config: vscode.WorkspaceConfiguration): { [key: number]: SpecialRules } {
+	const defRules: SpecialRules = {
+		minDuration: config.get("minDuration") as number,
+		maxDuration: config.get("maxDuration") as number,
+		maxLength: config.get("maxLength") as number,
+		maxLengthSub: config.get("maxLengthSub") as number
+	};
+
+	const rules: { [key: number]: SpecialRules } = {
+		[0]: defRules
+	};
+
+	const rulesByLineCount = config.get("rulesByLineCount") as { [key: string]: SpecialRulesPartial };
+
+	for (const count in rulesByLineCount) {
+		const i = parseInt(count);
+		if (isNaN(i)) continue;
+		const ruleset = rulesByLineCount[count];
+		rules[i] = {
+			minDuration: ruleset.minDuration || defRules.minDuration,
+			maxDuration: ruleset.maxDuration || defRules.maxDuration,
+			maxLength: ruleset.maxLength || defRules.maxLength,
+			maxLengthSub: ruleset.maxLengthSub || defRules.maxLengthSub
+		};
+	}
+
+	return rules;
+}
+
+function getSpecialRules(rules: { [key: number]: SpecialRules }, lineCount: number): SpecialRules {
+	return rules[lineCount] || rules[0];
+}
+
 const enum State {
 	Index,
 	Timing,
@@ -77,6 +124,7 @@ export function disposeDecorations(document: vscode.TextDocument) {
 
 export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 	const config = vscode.workspace.getConfiguration("srt-subrip");
+	const specialRules = buildSpecialRules(config);
 	const editor = vscode.window.activeTextEditor;
 	if (document.languageId !== "subrip" || document.uri != editor?.document.uri) return;
 
@@ -107,6 +155,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 	const showPause = config.get("showPause") as boolean;
 	const overlapWarning = config.get("overlapWarning") as boolean;
 	const lengthEnabled = config.get("length") as boolean;
+	const maxLines = config.get("maxLines") as number;
 
 	const ins: vscode.InlayHint[] = [];
 	inlays.set(document.uri, ins);
@@ -193,7 +242,32 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 					cps = NaN;
 				}
 
-				// TODO: Skipped all the diagnostics for now
+				const rules = getSpecialRules(specialRules, line_count);
+
+				if (rules.minDuration != -1 && last_timing < rules.minDuration) {
+					add_error(last_timing_k, `Duration is too short (<${rules.minDuration}ms)`);
+				}
+
+				if (rules.maxDuration != -1 && last_timing > rules.maxDuration) {
+					add_error(last_timing_k, `Duration is too long (>${rules.maxDuration}ms)`);
+				}
+
+				if (rules.maxLength != -1) {
+					for (let i = 0; i < line_lengths.length; i++) {
+						if (line_lengths[i] > rules.maxLength) {
+							add_error(last_timing_k + 1 + i, `Line is too long (>${rules.maxLength})`);
+						}
+					}
+				}
+
+				if (rules.maxLengthSub != -1 && total_length > rules.maxLengthSub) {
+					add_error(
+						last_timing_k, `Subtitle has too many characters (>${rules.maxLengthSub})`);
+				}
+
+				if (maxLines != -1 && line_count > maxLines) {
+					add_error(last_timing_k, `Subtitle has too many lines (>${maxLines})`);
+				}
 
 				let dur_bar = "";
 
