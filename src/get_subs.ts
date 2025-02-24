@@ -262,7 +262,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 
 				if (rules.maxLengthSub != -1 && total_length > rules.maxLengthSub) {
 					add_error(
-						last_timing_k, `Subtitle has too many characters (>${rules.maxLengthSub})`);
+						last_timing_k - 1, `Subtitle has too many characters (>${rules.maxLengthSub})`);
 				}
 
 				if (maxLines != -1 && line_count > maxLines) {

@@ -2,12 +2,13 @@
   "name": "srt-subrip",
   "displayName": "srt",
   "description": "SubRip subtitle support",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "icon": "images/logo.png",
   "engines": {
-    "vscode": "^1.97.0"
+    "vscode": "^1.80.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages"
   ],
   "activationEvents": [
     "onLanguage:subrip"
@@ -235,7 +236,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@types/vscode": "^1.97.0",
+    "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
     "@typescript-eslint/parser": "^8.22.0",
     "@vscode/test-cli": "^0.0.10",
