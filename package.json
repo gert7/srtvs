@@ -3,6 +3,10 @@
   "displayName": "srt",
   "description": "SubRip subtitle support",
   "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gert7/srtvs.git"
+  },
   "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.80.0"

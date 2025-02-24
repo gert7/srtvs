@@ -50,6 +50,8 @@ duration), `maxDuration` (maximum duration), `maxLength` (maximum length per lin
 
 Using the built-in undo function of the Vim extension is discouraged.
 
+Report any issues to our [issue tracker](https://github.com/gert7/srtvs/issues).
+
 ## Release Notes
 
 ### 1.0.0
