@@ -15,7 +15,7 @@ export function blankSubtitle(): Subtitle {
         end_ms: 0,
         duration_ms: 0,
         line_lengths: [],
-    }
+    };
 }
 
 const matcherFull = /^(\d\d):(\d\d):(\d\d),(\d\d\d) --> (\d\d):(\d\d):(\d\d),(\d\d\d)$/;
@@ -25,19 +25,19 @@ export function to_ms(h: number, m: number, s: number, mi: number) {
 }
 
 export function from_ms(ms: number): number[] {
-    const h = Math.floor(ms / 3600000)
-    ms = ms - h * 3600000
-    const m = Math.floor(ms / 60000)
-    ms = ms - m * 60000
-    const s = Math.floor(ms / 1000)
-    ms = ms - s * 1000
-    return [h, m, s, ms]
+    const h = Math.floor(ms / 3600000);
+    ms = ms - h * 3600000;
+    const m = Math.floor(ms / 60000);
+    ms = ms - m * 60000;
+    const s = Math.floor(ms / 1000);
+    ms = ms - s * 1000;
+    return [h, m, s, ms];
 }
 
 export function parseFullTiming(line: string): number[] | null[] {
     const r = line.match(matcherFull);
     if (!r) {
-        return [null, null]
+        return [null, null];
     }
     return [to_ms(
         parseInt(r[1]),
@@ -49,7 +49,7 @@ export function parseFullTiming(line: string): number[] | null[] {
         parseInt(r[6]),
         parseInt(r[7]),
         parseInt(r[8]),
-    )]
+    )];
 }
 
 export function makeDur(h: number, m: number, s: number, mi: number): string {

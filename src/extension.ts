@@ -29,22 +29,23 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.workspace.onDidChangeTextDocument((event) => {
 		try {
 			getSubs.annotateSubs(event.document, enabled);
-			if (event.reason == null && // not undo or redo
-				event.document.languageId == 'subrip') {
+			if (event.reason === undefined && // not undo or redo
+				event.document.languageId === 'subrip') {
 				const config = vscode.workspace.getConfiguration(EXT_NAME);
 				const autofixIndex = config.get("autofixIndex") as boolean;
 				if (autofixIndex) {
 					const editor =
 						vscode.window.visibleTextEditors.find(
-							(e) => e.document.uri == event.document.uri);
-					if (editor)
+							(e) => e.document.uri === event.document.uri);
+					if (editor) {
 						fixIndicesEditor(editor);
+					}
 				}
 			}
 		} catch (e) {
 			console.error(e);
 		}
-	})
+	});
 	vscode.workspace.onDidCloseTextDocument((document) => getSubs.disposeDecorations(document));
 
 	vscode.languages.registerInlayHintsProvider('subrip', {

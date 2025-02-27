@@ -19,7 +19,7 @@ export function getLines(editor: vscode.TextEditor) {
 
 export function getData(editor_in?: vscode.TextEditor): SrtEditorData | null {
 	const editor = editor_in || vscode.window.activeTextEditor;
-	if (!editor) return null;
+	if (!editor) { return null; }
 	const lines = editor?.document.getText().replace(/\r\n/g, '\n').split('\n');
 	return {
 		config: vscode.workspace.getConfiguration("srt-subrip"),
@@ -28,7 +28,7 @@ export function getData(editor_in?: vscode.TextEditor): SrtEditorData | null {
 		col: editor.selection.active.character,
 		lines: lines,
 		endLine: editor.selection.end.line
-	}
+	};
 }
 
 interface SpecialRules {
@@ -61,7 +61,7 @@ function buildSpecialRules(config: vscode.WorkspaceConfiguration): { [key: numbe
 
 	for (const count in rulesByLineCount) {
 		const i = parseInt(count);
-		if (isNaN(i)) continue;
+		if (isNaN(i)) { continue; }
 		const ruleset = rulesByLineCount[count];
 		rules[i] = {
 			minDuration: ruleset.minDuration || defRules.minDuration,
@@ -126,7 +126,9 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 	const config = vscode.workspace.getConfiguration("srt-subrip");
 	const specialRules = buildSpecialRules(config);
 	const editor = vscode.window.activeTextEditor;
-	if (document.languageId !== "subrip" || document.uri != editor?.document.uri) return;
+	if (document.languageId !== "subrip" || document.uri !== editor?.document.uri) {
+		return;
+	}
 
 	const text = document.getText().replace(/\r\n/g, '\n');
 	const lines = text.split("\n");
@@ -151,6 +153,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 
 	const alwaysCPS = config.get("cps") as boolean;
 	const warningCPS = config.get("cpsWarning") as boolean;
+	const diagnosticCPS = config.get("cpsDiagnostic") as boolean;
 	const maxCPS = config.get("maxCPS") as number;
 	const showPause = config.get("showPause") as boolean;
 	const overlapWarning = config.get("overlapWarning") as boolean;
@@ -169,7 +172,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 
 	function add_error(ln: number, text: string) {
 		const range = new vscode.Range(ln, 0, ln, lines[ln].length);
-		diagnostics.push(new vscode.Diagnostic(range, text, DiagnosticSeverity.Error))
+		diagnostics.push(new vscode.Diagnostic(range, text, DiagnosticSeverity.Error));
 	}
 
 	function add_hint(ln: number, text: string) {
@@ -181,7 +184,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 
-		if (state == State.Index && line != "") {
+		if (state === State.Index && line !== "") {
 			const n = line.match(/^\d+$/);
 			if (!n) {
 				add_error(i, "Error reading subtitle index!");
@@ -189,14 +192,14 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 			}
 			const index = parseInt(n[0]);
 
-			if (index != last_index + 1) {
+			if (index !== last_index + 1) {
 				add_error(i, "Subtitle index not sequential!");
 			}
 			last_index = index;
 			state = State.Timing;
-		} else if (state == State.Timing) {
+		} else if (state === State.Timing) {
 			const [from, to] = parseFullTiming(line);
-			if (!from || !to) {
+			if (from === null || to === null) {
 				add_error(i, "Error reading duration!");
 				break;
 			}
@@ -226,15 +229,15 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 				add_error(pauseline + 1, "Pause is too short");
 			}
 			state = State.Subtitle;
-		} else if (state == State.Subtitle) {
-			if (line != "") {
+		} else if (state === State.Subtitle) {
+			if (line !== "") {
 				const clean = removeTags(line);
 				const len = clean.length;
 				total_length += len;
 				line_count++;
 				line_lengths.push(len);
 			} else {
-				const dbz = last_timing == 0;
+				const dbz = last_timing === 0;
 				let cps = 0;
 				if (!dbz) {
 					cps = total_length / last_timing * 1000;
@@ -244,15 +247,15 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 
 				const rules = getSpecialRules(specialRules, line_count);
 
-				if (rules.minDuration != -1 && last_timing < rules.minDuration) {
+				if (rules.minDuration !== -1 && last_timing < rules.minDuration) {
 					add_error(last_timing_k, `Duration is too short (<${rules.minDuration}ms)`);
 				}
 
-				if (rules.maxDuration != -1 && last_timing > rules.maxDuration) {
+				if (rules.maxDuration !== -1 && last_timing > rules.maxDuration) {
 					add_error(last_timing_k, `Duration is too long (>${rules.maxDuration}ms)`);
 				}
 
-				if (rules.maxLength != -1) {
+				if (rules.maxLength !== -1) {
 					for (let i = 0; i < line_lengths.length; i++) {
 						if (line_lengths[i] > rules.maxLength) {
 							add_error(last_timing_k + 1 + i, `Line is too long (>${rules.maxLength})`);
@@ -260,12 +263,12 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 					}
 				}
 
-				if (rules.maxLengthSub != -1 && total_length > rules.maxLengthSub) {
+				if (rules.maxLengthSub !== -1 && total_length > rules.maxLengthSub) {
 					add_error(
 						last_timing_k - 1, `Subtitle has too many characters (>${rules.maxLengthSub})`);
 				}
 
-				if (maxLines != -1 && line_count > maxLines) {
+				if (maxLines !== -1 && line_count > maxLines) {
 					add_error(last_timing_k, `Subtitle has too many lines (>${maxLines})`);
 				}
 
@@ -279,6 +282,9 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 					(alwaysCPS || (warningCPS && cps > maxCPS))) {
 					const percent = cps / maxCPS * 100;
 					dur_bar = dur_bar + ' (' + Math.floor(percent) + '%)';
+					if (diagnosticCPS && cps > maxCPS) {
+						add_error(last_timing_k, `Subtitle has too many characters per second`);
+					}
 				}
 
 				add_hint(last_timing_k, dur_bar);
@@ -290,7 +296,7 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 		}
 	};
 
-	if (state == State.Timing) {
+	if (state === State.Timing) {
 		add_error(lines.length - 1, "Subtitle is not terminated");
 	}
 
@@ -298,8 +304,8 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 }
 
 export class ParseError {
-	error: string
-	line: number
+	error: string;
+	line: number;
 	constructor(error: string, line: number) {
 		this.error = error;
 		this.line = line;
@@ -325,10 +331,10 @@ export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
-		if (state == State.Index) {
-			if (line == "" && overFirst) {
+		if (state === State.Index) {
+			if (line === "" && overFirst) {
 				nextSubtitle.line_lengths.push(0);
-			} else if (line != "") {
+			} else if (line !== "") {
 				const n = line.match(/^\d+$/);
 				if (!n) {
 					return new ParseError("Error reading subtitle index!", i);
@@ -339,7 +345,7 @@ export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 				nextSubtitle.index = index;
 				state = State.Timing;
 			}
-		} else if (state == State.Timing) {
+		} else if (state === State.Timing) {
 			const [from, to] = parseFullTiming(line);
 			if (!from || !to) {
 				return new ParseError("Error reading duration!", i);
@@ -350,8 +356,8 @@ export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 			nextSubtitle.duration_ms = to - from;
 
 			state = State.Subtitle;
-		} else if (state == State.Subtitle) {
-			if (line == "") {
+		} else if (state === State.Subtitle) {
+			if (line === "") {
 				subtitles.push(nextSubtitle);
 				nextSubtitle = blankSubtitle();
 				state = State.Index;
@@ -362,7 +368,7 @@ export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 		}
 	}
 
-	if (state == State.Subtitle) {
+	if (state === State.Subtitle) {
 		subtitles.push(nextSubtitle);
 	}
 

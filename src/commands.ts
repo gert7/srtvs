@@ -43,7 +43,9 @@ function defineCommandSubs(
     func: (data: SrtEditorData, subs: Subtitle[]) => void): vscode.Disposable {
     return vscode.commands.registerCommand(`srt-subrip.${name}`, () => {
         const data = getData();
-        if (data == null) return;
+        if (data === null) {
+            return;
+        }
         const parseResult = parseSubtitles(data.lines);
         if (parseResult instanceof ParseError) {
             console.error(parseResult);
@@ -60,14 +62,16 @@ function defineCommandSubtitle(
     func: (data: SrtEditorData, subs: Subtitle[], sub_i: number) => void): vscode.Disposable {
     return vscode.commands.registerCommand(`srt-subrip.${name}`, () => {
         const data = getData();
-        if (data == null) return;
+        if (data === null) {
+            return;
+        }
         const parseResult = parseSubtitles(data.lines);
         if (parseResult instanceof ParseError) {
             console.error(parseResult);
             return;
         }
         const sub_i = findSubtitle(parseResult, data.line);
-        if (sub_i == null) {
+        if (sub_i === null) {
             vscode.window.showWarningMessage("Not in a subtitle");
             return;
         }
@@ -98,21 +102,21 @@ function subMerge(lines: string[], subs: Subtitle[], sub_i: number): string[] {
 
 function srtMerge(data: SrtEditorData, subs: Subtitle[]) {
     const sub_first = findSubtitle(subs, data.line);
-    if (sub_first == null) {
+    if (sub_first === null) {
         vscode.window.showErrorMessage("Not in a subtitle");
         return;
     }
-    if (sub_first == subs.length - 1) {
+    if (sub_first === subs.length - 1) {
         vscode.window.showErrorMessage("Can't merge the last subtitle");
         return;
     }
 
     let sub_last = findSubtitle(subs, data.endLine);
-    if (sub_last == null) {
+    if (sub_last === null) {
         vscode.window.showErrorMessage("Can't find last subtitle");
         return;
     }
-    if (sub_last == sub_first) {
+    if (sub_last === sub_first) {
         sub_last++;
     }
 
@@ -141,11 +145,11 @@ async function srtSplit(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     const minPause = config.get("minPause") as number;
     const splitWithMinPause = config.get("splitWithMinPause") as boolean;
     let split_mode = config.get("splitMode") as SplitMode;
-    if (split_mode == "ask") {
+    if (split_mode === "ask") {
         let result = await vscode.window.showQuickPick(['length', 'half'], {
             placeHolder: "Select how to split the subtitle (set to ask every time)"
         });
-        if (result != null) {
+        if (result !== null) {
             split_mode = result as SplitMode;
         } else {
             return;
@@ -154,11 +158,11 @@ async function srtSplit(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
 
     const sub = subs[sub_i];
     const line_count = sub.line_lengths.length;
-    if (line_count == 0) {
+    if (line_count === 0) {
         vscode.window.showWarningMessage("Can't split a subtitle with no lines");
         return;
     }
-    if (line_count % 2 != 0) {
+    if (line_count % 2 !== 0) {
         vscode.window.showWarningMessage("Can't split a subtitle with an odd number of lines");
         return;
     }
@@ -174,12 +178,12 @@ async function srtSplit(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     }
 
     let split_ms = 0;
-    if (split_mode == "length") {
+    if (split_mode === "length") {
         const half = sub.line_lengths.length / 2;
         const length_first = sub.line_lengths.slice(0, half).reduce((p, v) => p + v);
         const length_second = sub.line_lengths.slice(half).reduce((p, v) => p + v);
         const per = length_first / (length_first + length_second);
-        split_ms = Math.floor(sub.start_ms + sub.duration_ms * per)
+        split_ms = Math.floor(sub.start_ms + sub.duration_ms * per);
     } else {
         split_ms = Math.floor(sub.start_ms + sub.duration_ms / 2);
     }
@@ -201,7 +205,7 @@ async function srtSplit(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
 
     data.editor.edit(editBuilder => {
         editBuilder.replace(
-            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'))
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'));
     });
 }
 
@@ -215,7 +219,7 @@ function fixIndicesSurgical(lines: string[], subs: Subtitle[]): IndexFixPair[] {
     for (let i = 0; i < subs.length; i++) {
         const sub = subs[i];
         const should = i + 1;
-        if (sub.index != should) {
+        if (sub.index !== should) {
             pairs.push({
                 line: sub.line_pos,
                 index: should
@@ -227,7 +231,7 @@ function fixIndicesSurgical(lines: string[], subs: Subtitle[]): IndexFixPair[] {
 
 export function fixIndicesEditor(editor: vscode.TextEditor): boolean | ParseError {
     const data = getData(editor);
-    if (data == null) {
+    if (data === null) {
         return false;
     }
 
@@ -246,7 +250,7 @@ export function fixIndicesEditor(editor: vscode.TextEditor): boolean | ParseErro
                 const range = new vscode.Range(start, end);
                 editBuilder.replace(range, pair.index.toString());
             }
-        })
+        });
     }
     return changed;
 }
@@ -281,7 +285,7 @@ function srtSort(data: SrtEditorData, subs: Subtitle[]) {
     const sorted = subSort(data.lines, subs);
     data.editor.edit(editBuilder => {
         editBuilder.replace(
-            lineRangeN(data.editor, 0, data.editor.document.lineCount), sorted.join('\n'))
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), sorted.join('\n'));
     });
 }
 
@@ -299,7 +303,7 @@ function fixTiming(
     const sub = subs[i];
     const next = subs[i + 1];
     if (sub.start_ms > sub.end_ms) {
-        return [null, `Subtitle ${sub.index} has a negative duration`]
+        return [null, `Subtitle ${sub.index} has a negative duration`];
     } else if (sub.end_ms > next.start_ms ||
         (fixBadMinPause && sub.end_ms > next.start_ms - minPause)) {
         let mp = 0;
@@ -321,7 +325,7 @@ function fixTiming(
 }
 
 function srtFixTiming(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
-    if (sub_i != subs.length) {
+    if (sub_i !== subs.length) {
         const sub = subs[sub_i];
         const newLines = data.lines.slice();
         const [fix, error] = fixTiming(newLines, subs, sub_i, data.config);
@@ -329,7 +333,7 @@ function srtFixTiming(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
             vscode.window.showInformationMessage(`Fixed timing for subtitle ${sub.index}`);
             data.editor.edit(editBuilder => {
                 editBuilder.replace(
-                    lineRangeN(data.editor, 0, data.editor.document.lineCount), fix.join('\n'))
+                    lineRangeN(data.editor, 0, data.editor.document.lineCount), fix.join('\n'));
             });
         } else if (error) {
             vscode.window.showErrorMessage(error);
@@ -353,7 +357,7 @@ function srtFixTimingAll(data: SrtEditorData, subs: Subtitle[]) {
     if (count > 0) {
         data.editor.edit(editBuilder => {
             editBuilder.replace(
-                lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'))
+                lineRangeN(data.editor, 0, data.editor.document.lineCount), newLines.join('\n'));
         });
         vscode.window.showInformationMessage(`Fixed timings for ${count} subtitles`);
     } else {
@@ -364,11 +368,11 @@ function srtFixTimingAll(data: SrtEditorData, subs: Subtitle[]) {
 function parseTime(str_in: string): number | null {
     let str = str_in;
     let mul = 1;
-    if (str[0] == '-') {
+    if (str[0] === '-') {
         mul = -1;
         str = str.substring(1);
     }
-    else if (str[0] == '+') {
+    else if (str[0] === '+') {
         str = str.substring(1);
     }
 
@@ -377,7 +381,7 @@ function parseTime(str_in: string): number | null {
     }
 
     const hmsmi = str.match(/^(\d+):(\d+):(\d+),(\d+)$/);
-    if (hmsmi != null) {
+    if (hmsmi !== null) {
         const h = parseInt(hmsmi[1]);
         const m = parseInt(hmsmi[2]);
         const s = parseInt(hmsmi[3]);
@@ -386,7 +390,7 @@ function parseTime(str_in: string): number | null {
     }
 
     const msmi = str.match(/^(\d+):(\d+),(\d+)$/);
-    if (msmi != null) {
+    if (msmi !== null) {
         const m = parseInt(msmi[1]);
         const s = parseInt(msmi[2]);
         const mi = parseInt(msmi[3]);
@@ -394,14 +398,14 @@ function parseTime(str_in: string): number | null {
     }
 
     const smi = str.match(/^(\d+),(\d+)$/);
-    if (smi != null) {
+    if (smi !== null) {
         const s = parseInt(smi[1]);
         const mi = parseInt(smi[2]);
         return to_ms(0, 0, s, mi) * mul;
     }
 
     const hms = str.match(/^(\d+):(\d+):(\d+)$/);
-    if (hms != null) {
+    if (hms !== null) {
         const h = parseInt(hms[1]);
         const m = parseInt(hms[2]);
         const s = parseInt(hms[3]);
@@ -409,7 +413,7 @@ function parseTime(str_in: string): number | null {
     }
 
     const ms = str.match(/^(\d+):(\d+)$/);
-    if (ms != null) {
+    if (ms !== null) {
         const m = parseInt(ms[1]);
         const s = parseInt(ms[2]);
         return to_ms(0, m, s, 0) * mul;
@@ -434,7 +438,7 @@ function subShift(
     to: number,
     shift: number): [string[], string | null] {
     const newLines = lines.slice();
-    if (to == -1) {
+    if (to === -1) {
         to = subs.length - 1;
     }
     for (let i = from; i < to; i++) {
@@ -459,13 +463,13 @@ const shiftExplainer =
 async function srtShift(data: SrtEditorData, subs: Subtitle[]) {
     const defShift = data.config.get("shiftMS") as number;
     const sub_first = findSubtitle(subs, data.line);
-    if (sub_first == null) {
+    if (sub_first === null) {
         vscode.window.showWarningMessage("Not in a subtitle");
         return;
     }
 
     let sub_last = sub_first;
-    if (data.line != data.endLine) {
+    if (data.line !== data.endLine) {
         sub_last = findSubtitle(subs, data.endLine) || sub_first;
     }
 
@@ -473,16 +477,16 @@ async function srtShift(data: SrtEditorData, subs: Subtitle[]) {
         value: defShift.toString(),
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftExplainer : null;
+            return parseTime(text) === null ? shiftExplainer : null;
         }
     });
 
-    if (result == null) { return; }
+    if (result === undefined) { return; }
     const shift = parseTime(result);
-    if (shift == null) { return; }
+    if (shift === null) { return; }
 
     const [lines, err] = subShift(data.lines, subs, sub_first, sub_last + 1, shift);
-    if (err != null) {
+    if (err !== null) {
         vscode.window.showErrorMessage(err);
         return;
     }
@@ -497,7 +501,7 @@ async function srtShift(data: SrtEditorData, subs: Subtitle[]) {
 
     data.editor.edit(editBuilder => {
         editBuilder.replace(
-            lineRangeN(data.editor, 0, data.editor.document.lineCount), sortedLines.join('\n'))
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), sortedLines.join('\n'));
     });
 }
 
@@ -507,23 +511,23 @@ async function srtShiftAll(data: SrtEditorData, subs: Subtitle[]) {
         value: defShift.toString(),
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftExplainer : null;
+            return parseTime(text) === null ? shiftExplainer : null;
         }
     });
 
-    if (result == null) { return; }
+    if (result === undefined) { return; }
     const shift = parseTime(result);
-    if (shift == null) { return; }
+    if (shift === null) { return; }
 
     const [lines, err] = subShift(data.lines, subs, 0, subs.length, shift);
-    if (err != null) {
+    if (err !== null) {
         vscode.window.showErrorMessage(err);
         return;
     }
 
     data.editor.edit(editBuilder => {
         editBuilder.replace(
-            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'))
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'));
     });
 }
 
@@ -560,7 +564,7 @@ async function srtImport(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     };
     const fileURI = await vscode.window.showOpenDialog(options);
 
-    if (fileURI != null && fileURI.length > 0) {
+    if (fileURI !== null && fileURI !== undefined && fileURI.length > 0) {
         vscode.window.showInformationMessage(`Selected file: ${fileURI[0].fsPath}`);
     } else {
         return;
@@ -587,13 +591,13 @@ async function srtImport(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
         value: defPause.toString(),
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftExplainer : null;
+            return parseTime(text) === null ? shiftExplainer : null;
         }
     });
 
-    if (result == null) { return; }
+    if (result === undefined) { return; }
     const shift = parseTime(result);
-    if (shift == null) { return; }
+    if (shift === null) { return; }
 
     const offset = sub.end_ms + shift;
     const withImport = subImport(lines, parseResult, offset);
@@ -603,7 +607,7 @@ async function srtImport(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     }
     data.editor.edit(editBuilder => {
         editBuilder.replace(
-            lineRangeN(data.editor, 0, data.editor.document.lineCount), withImport.join('\n'))
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), withImport.join('\n'));
     });
 }
 
@@ -619,7 +623,7 @@ async function srtImportAbsolute(data: SrtEditorData, subs: Subtitle[]) {
     };
     const fileURI = await vscode.window.showOpenDialog(options);
 
-    if (fileURI != null && fileURI.length > 0) {
+    if (fileURI !== null && fileURI !== undefined && fileURI.length > 0) {
         vscode.window.showInformationMessage(`Selected file: ${fileURI[0].fsPath}`);
     } else {
         return;
@@ -646,13 +650,13 @@ async function srtImportAbsolute(data: SrtEditorData, subs: Subtitle[]) {
         value: '0',
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftExplainer : null;
+            return parseTime(text) === null ? shiftExplainer : null;
         }
     });
 
-    if (result == null) { return; }
+    if (result === undefined) { return; }
     const shift = parseTime(result);
-    if (shift == null) { return; }
+    if (shift === null) { return; }
 
     const offset = shift;
     const withImport = subImport(lines, parseResult, offset);
@@ -662,7 +666,7 @@ async function srtImportAbsolute(data: SrtEditorData, subs: Subtitle[]) {
     }
     data.editor.edit(editBuilder => {
         editBuilder.replace(
-            lineRangeN(data.editor, 0, data.editor.document.lineCount), withImport.join('\n'))
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), withImport.join('\n'));
     });
 }
 
@@ -675,13 +679,13 @@ async function srtAdd(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
         value: minPause.toString(),
         placeHolder: "Pause time",
         validateInput: text => {
-            return parseTime(text) == null ? shiftExplainer : null;
+            return parseTime(text) === null ? shiftExplainer : null;
         }
     });
 
-    if (result == null) { return; }
+    if (result === undefined) { return; }
     const offset = parseTime(result);
-    if (offset == null) { return; }
+    if (offset === null) { return; }
 
     const sub = subs[sub_i];
     const new_line = sub.line_pos + 2 + sub.line_lengths.length;
@@ -715,7 +719,7 @@ async function srtAdd(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
 async function srtShiftTime(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     const sub = subs[sub_i];
     const timing_line = sub.line_pos + 1;
-    if (data.line != timing_line) {
+    if (data.line !== timing_line) {
         vscode.window.showErrorMessage("Not on duration line");
         return;
     }
@@ -726,13 +730,13 @@ async function srtShiftTime(data: SrtEditorData, subs: Subtitle[], sub_i: number
         value: shiftMS.toString(),
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftExplainer : null;
+            return parseTime(text) === null ? shiftExplainer : null;
         }
     });
 
-    if (result == null) { return; }
+    if (result === undefined) { return; }
     const offset = parseTime(result);
-    if (offset == null) { return; }
+    if (offset === null) { return; }
 
     if (data.col >= 0 && data.col <= 12) {
         const new_ms = sub.start_ms + offset;
@@ -766,13 +770,13 @@ async function srtShiftTime(data: SrtEditorData, subs: Subtitle[], sub_i: number
 function srtEnforce(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     const minPause = data.config.get("minPause") as number;
     const sub = subs[sub_i];
-    if (data.line != sub.line_pos + 1) {
+    if (data.line !== sub.line_pos + 1) {
         vscode.window.showErrorMessage("Not on duration line");
         return;
     }
 
     if (data.col >= 0 && data.col <= 12) {
-        if (sub_i == 0) {
+        if (sub_i === 0) {
             vscode.window.showInformationMessage("Can't apply this on the first subtitle");
             return;
         }
@@ -829,7 +833,7 @@ function srtEnforce(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
 
 async function srtShiftTimeStrict(data: SrtEditorData, subs: Subtitle[], sub_i: number) {
     const sub = subs[sub_i];
-    if (data.line != sub.line_pos + 1) {
+    if (data.line !== sub.line_pos + 1) {
         vscode.window.showErrorMessage("Not on duration line");
         return;
     }
@@ -841,13 +845,13 @@ async function srtShiftTimeStrict(data: SrtEditorData, subs: Subtitle[], sub_i: 
         value: shiftMS.toString(),
         placeHolder: "Time to shift",
         validateInput: text => {
-            return parseTime(text) == null ? shiftExplainer : null;
+            return parseTime(text) === null ? shiftExplainer : null;
         }
     });
 
-    if (result == null) { return; }
+    if (result === undefined) { return; }
     const offset = parseTime(result);
-    if (offset == null) { return; }
+    if (offset === null) { return; }
 
     const lines = data.lines.slice();
 
@@ -949,7 +953,7 @@ async function srtJump(data: SrtEditorData, subs: Subtitle[]) {
         }
     });
 
-    if (result == null) { return; }
+    if (result === undefined) { return; }
     const i = parseInt(result);
     if (subs.length < i) {
         vscode.window.showErrorMessage(`No subtitle with index ${i}`);
@@ -959,7 +963,7 @@ async function srtJump(data: SrtEditorData, subs: Subtitle[]) {
     const line = subs[i - 1].line_pos;
     data.editor.selection = new vscode.Selection(p(line, 0), p(line, 0));
     const range = lineRange(line, line);
-    data.editor.revealRange(range, vscode.TextEditorRevealType.InCenter)
+    data.editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
 }
 
 

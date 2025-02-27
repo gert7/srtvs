@@ -30,8 +30,9 @@ subtitles.
 ## Settings
 
 In addition to configuring global warnings, you can also specify the warnings `minDuration` (minimum
-duration), `maxDuration` (maximum duration), `maxLength` (maximum length per line) and
-`maxLengthSub` (maximum length per entire subtitle) based on how many lines are in a subtitle:
+duration in milliseconds), `maxDuration` (maximum duration in milliseconds), `maxLength` (maximum
+length per line) and `maxLengthSub` (maximum length per entire subtitle) based on how many lines are
+in a subtitle:
 
 ```javascript
 "srt-subrip.rulesByLineCount": {
@@ -48,7 +49,7 @@ duration), `maxDuration` (maximum duration), `maxLength` (maximum length per lin
 
 ## Known Issues
 
-Using the built-in undo function of the Vim extension is discouraged.
+Using the built-in undo function of the Vim extension is strongly discouraged.
 
 Report any issues to our [issue tracker](https://github.com/gert7/srtvs/issues).
 
@@ -57,3 +58,7 @@ Report any issues to our [issue tracker](https://github.com/gert7/srtvs/issues).
 ### 1.0.0
 
 Initial release.
+
+### 1.1.0
+
+Add elevating CPS warning to error diagnostic.

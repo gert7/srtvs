@@ -1,8 +1,9 @@
 {
   "name": "srt-subrip",
+  "publisher": "gert7",
   "displayName": "srt",
   "description": "SubRip subtitle support",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gert7/srtvs.git"
@@ -126,6 +127,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show characters per second % if over CPS"
+        },
+        "srt-subrip.cpsDiagnostic": {
+          "type": "boolean",
+          "default": false,
+          "description": "Elevate CPS warnings to errors"
         },
         "srt-subrip.minPause": {
           "type": "number",
