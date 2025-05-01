@@ -1,5 +1,7 @@
 # srt
 
+[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/gert7.srt-subrip)](https://marketplace.visualstudio.com/items/?itemName=gert7.srt-subrip)
+
 [![ko-fi](./images/githubbutton_sm.png)](https://ko-fi.com/N4N116CYI2)
 
 This is a port of the [srt.nvim](https://github.com/gert7/srt.nvim) extension for NeoVim for SubRip
