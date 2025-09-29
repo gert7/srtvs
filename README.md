@@ -28,6 +28,7 @@ subtitles.
 - Add a subtitle
 - Shift the beginning or end time of a duration (based on cursor position)
 - Shift with strict timing
+- Delete empty lines that cause syntax errors
 
 ## Settings
 
@@ -64,3 +65,7 @@ Initial release.
 ### 1.1.0
 
 Add elevating CPS warning to error diagnostic.
+
+### 1.2.0
+
+Add command to delete empty lines commonly found in automated translations
