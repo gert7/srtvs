@@ -3,7 +3,7 @@
   "publisher": "gert7",
   "displayName": "srt",
   "description": "SubRip subtitle support",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gert7/srtvs.git"
@@ -88,6 +88,10 @@
       {
         "command": "srt-subrip.jump",
         "title": "srt: Jump to subtitle"
+      },
+      {
+        "command": "srt-subrip.deleteEmptyLines",
+        "title": "srt: Delete empty lines that cause syntax errors"
       }
     ],
     "configuration": {

@@ -303,12 +303,19 @@ export function annotateSubs(document: vscode.TextDocument, enabled: boolean) {
 	diagnosticCollection.set(document.uri, diagnostics);
 }
 
+export enum ParseErrorType {
+	ErrorAtIndex,
+	ErrorReadingDuration,
+}
+
 export class ParseError {
 	error: string;
 	line: number;
-	constructor(error: string, line: number) {
+	errorType: ParseErrorType;
+	constructor(error: string, line: number, errorType: ParseErrorType) {
 		this.error = error;
 		this.line = line;
+		this.errorType = errorType;
 	}
 
 	toString(): string {
@@ -319,7 +326,7 @@ export class ParseError {
 /**
  * Parse a subtitle file and return the subtitles.
  * @param lines The LF-terminated lines to parse.
- * @returns An array of {@link Subtitle} or an error string.
+ * @returns An array of {@link Subtitle} or an error.
  */
 export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 	let state = State.Index;
@@ -337,7 +344,7 @@ export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 			} else if (line !== "") {
 				const n = line.match(/^\d+$/);
 				if (!n) {
-					return new ParseError("Error reading subtitle index!", i);
+					return new ParseError("Error reading subtitle index!", i, ParseErrorType.ErrorAtIndex);
 				}
 				nextSubtitle.line_pos = i;
 				const index = parseInt(n[0]);
@@ -348,7 +355,7 @@ export function parseSubtitles(lines: string[]): Subtitle[] | ParseError {
 		} else if (state === State.Timing) {
 			const [from, to] = parseFullTiming(line);
 			if (!from || !to) {
-				return new ParseError("Error reading duration!", i);
+				return new ParseError("Error reading duration!", i, ParseErrorType.ErrorReadingDuration);
 			}
 
 			nextSubtitle.start_ms = from;

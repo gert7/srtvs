@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
-import { findSubtitle, getData, ParseError, parseSubtitles, SrtEditorData } from "./get_subs";
+import { findSubtitle, getData, ParseError, ParseErrorType, parseSubtitles, SrtEditorData } from "./get_subs";
 import { amendEnd, amendStart, makeDurFullMS, makeDurMS, Subtitle, to_ms } from "./subtitle";
-import { readFile } from "fs/promises";
 
 function p(line: number, col: number): vscode.Position {
     return new vscode.Position(line, col);
@@ -967,6 +966,48 @@ async function srtJump(data: SrtEditorData, subs: Subtitle[]) {
 }
 
 
+function srtDeleteEmptyLines(data: SrtEditorData) {
+    let count = 0;
+    const limit = 1000;
+    let lines = data.lines.slice();
+
+    for (let i = 0; i < limit; i++) {
+        if (i >= limit) {
+            vscode.window.showWarningMessage(`Stopping after fail-safe limit of ${limit} iterations. Consider running this command again`);
+        }
+        const lineCount = lines.length;
+        if (lineCount < 3) {
+            vscode.window.showInformationMessage("Too few lines to run command");
+            break;
+        }
+        const err = parseSubtitles(lines);
+        if (err instanceof ParseError) {
+            if (err.errorType == ParseErrorType.ErrorAtIndex) {
+                const line = err.line;
+                const startLines = lines.slice(0, line - 1);
+                const endLines = lines.slice(line);
+                lines = startLines.concat(endLines);
+                count++;
+                if (lines.length == lineCount) {
+                    vscode.window.showErrorMessage("Line deletion had no effect!");
+                    break;
+                }
+            } else {
+                vscode.window.showErrorMessage(`Error other than reading index found on line ${err.line}: ${err}`);
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'));
+    });
+    vscode.window.showInformationMessage(`Deleted ${count} empty lines`);
+}
+
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -985,4 +1026,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("shiftTimeStrict", srtShiftTimeStrict));
     context.subscriptions.push(defineCommandSubtitle("swap", srtSwap));
     context.subscriptions.push(defineCommandSubs("jump", srtJump));
+    context.subscriptions.push(defineCommand("deleteEmptyLines", srtDeleteEmptyLines));
 }
