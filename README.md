@@ -70,3 +70,7 @@ Add elevating CPS warning to error diagnostic.
 ### 1.2.0
 
 Add command to delete empty lines commonly found in automated translations
+
+### 1.3.0
+
+Add command to stretch subtitle times
