@@ -77,11 +77,11 @@ export function makeDurFull(
     const h1 = fh.toString().padStart(2, "0");
     const m1 = fm.toString().padStart(2, "0");
     const s1 = fs.toString().padStart(2, "0");
-    const mi1 = fmi.toString().padStart(3, "0");
+    const mi1 = Math.floor(fmi).toString().padStart(3, "0").slice(0, 3);
     const h2 = th.toString().padStart(2, "0");
     const m2 = tm.toString().padStart(2, "0");
     const s2 = ts.toString().padStart(2, "0");
-    const mi2 = tmi.toString().padStart(3, "0");
+    const mi2 = Math.floor(tmi).toString().padStart(3, "0").slice(0, 3);
     return `${h1}:${m1}:${s1},${mi1} --> ${h2}:${m2}:${s2},${mi2}`;
 }
 

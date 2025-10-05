@@ -29,6 +29,7 @@ subtitles.
 - Shift the beginning or end time of a duration (based on cursor position)
 - Shift with strict timing
 - Delete empty lines that cause syntax errors
+- Stretch subtitle time (first and last subtitle adjustment)
 
 ## Settings
 

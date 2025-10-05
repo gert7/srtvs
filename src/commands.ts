@@ -533,7 +533,7 @@ async function srtShiftAll(data: SrtEditorData, subs: Subtitle[]) {
 function subImport(
     lines: string[],
     subs: Subtitle[],
-    offset_abs: number): string[] | ParseError { 
+    offset_abs: number): string[] | ParseError {
     const new_lines = lines.slice();
     for (const new_sub of subs) {
         const new_start = new_sub.start_ms + offset_abs;
@@ -1008,6 +1008,132 @@ function srtDeleteEmptyLines(data: SrtEditorData) {
 }
 
 
+enum TimeSpec {
+    Start,
+    End,
+}
+
+
+function parseTimeWithSpecifier(input: string): [number | null, TimeSpec] {
+    let timeStr = input;
+    let spec = TimeSpec.Start;
+
+    const lastChar = input.slice(-1).toUpperCase();
+
+    if (lastChar == 'S') {
+        timeStr = input.slice(0, -1);
+        spec = TimeSpec.Start;
+    } else if (lastChar == 'E') {
+        timeStr = input.slice(0, -1);
+        spec = TimeSpec.End;
+    }
+
+    const ms = parseTime(timeStr);
+    if (ms === null) {
+        return [parseTime(timeStr), TimeSpec.Start];
+    }
+    return [ms, spec];
+}
+
+
+const stretchExplainer =
+    "Provide a valid time, e.g. 1000, 01:02, 01:02:03, 01:02:03,123, 01:02,123, 01,123 (E for end time)";
+
+async function srtStretchTime(data: SrtEditorData, subs: Subtitle[]) {
+    let subFirst = findSubtitle(subs, data.line);
+    let subLast = findSubtitle(subs, data.endLine) || subFirst;
+
+    if (subFirst == subLast) {
+        subFirst = 0;
+        subLast = subs.length - 1;
+    }
+
+    if (subFirst === null) {
+        subFirst = 0;
+    }
+
+    if (subLast === null) {
+        subLast = subs.length - 1;
+    }
+
+    let result = await vscode.window.showInputBox({
+        placeHolder: "Enter first subtitle time",
+        validateInput: text => {
+            const [ms, _] = parseTimeWithSpecifier(text);
+            return ms === null ? stretchExplainer : null;
+        }
+    });
+    if (result === undefined) { return; }
+    const [newFirstTime, firstSpec] = parseTimeWithSpecifier(result);
+    if (newFirstTime === null) { return; }
+
+    result = await vscode.window.showInputBox({
+        placeHolder: "Enter last subtitle time",
+        validateInput: text => {
+            const [ms, _] = parseTimeWithSpecifier(text);
+            return ms === null ? stretchExplainer : null;
+        }
+    });
+    if (result === undefined) { return; }
+    const [newLastTime, lastSpec] = parseTimeWithSpecifier(result);
+    if (newLastTime === null) { return; }
+
+    let oldFirstTime;
+    if (firstSpec === TimeSpec.Start) {
+        oldFirstTime = subs[subFirst].start_ms;
+    } else { // end
+        oldFirstTime = subs[subFirst].end_ms;
+    }
+
+    let oldLastTime;
+    if (lastSpec === TimeSpec.Start) {
+        oldLastTime = subs[subLast].start_ms;
+    } else { // end
+        oldLastTime = subs[subLast].end_ms;
+    }
+
+    const oldLength = oldLastTime - oldFirstTime;
+    if (oldLength === 0) {
+        vscode.window.showErrorMessage("Cannot stretch a range with zero duration.");
+        return;
+    }
+    const newLength = newLastTime - newFirstTime;
+    const difference = newLength / oldLength;
+    const lines = data.lines.slice();
+
+    let count = 0;
+    for (let i = subFirst; i < (subLast + 1); i++) {
+        const sub = subs[i];
+
+        const oldRelStart = sub.start_ms - oldFirstTime;
+        const oldRelEnd = sub.end_ms - oldFirstTime;
+
+        const newStartMS = (oldRelStart * difference) + newFirstTime;
+        const newEndMS = (oldRelEnd * difference) + newFirstTime;
+
+        if (newStartMS < 0) {
+            vscode.window.showErrorMessage
+                (`Stretch operation would result in a negative start time for subtitle ${sub.index}`);
+            return;
+        }
+
+        if (newStartMS > newEndMS) {
+            vscode.window.showErrorMessage
+                (`Stretch operation would result in a negative duration for subtitle ${sub.index}`);
+            return;
+        }
+
+        lines[sub.line_pos + 1] = makeDurFullMS(newStartMS, newEndMS);
+        count++;
+    }
+    data.editor.edit(editBuilder => {
+        editBuilder.replace(
+            lineRangeN(data.editor, 0, data.editor.document.lineCount), lines.join('\n'));
+    });
+    vscode.window.showInformationMessage(`Modified ${count} subtitles`);
+}
+
+
 export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("echo", echoCurrentSubtitle));
     context.subscriptions.push(defineCommandSubtitle("merge", srtMerge));
@@ -1027,4 +1153,5 @@ export function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(defineCommandSubtitle("swap", srtSwap));
     context.subscriptions.push(defineCommandSubs("jump", srtJump));
     context.subscriptions.push(defineCommand("deleteEmptyLines", srtDeleteEmptyLines));
+    context.subscriptions.push(defineCommandSubs("stretchTime", srtStretchTime));
 }
