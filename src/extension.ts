@@ -7,8 +7,28 @@ let enabled = true;
 
 const EXT_NAME = "srt-subrip";
 
+export class SrtInlayHintsProvider implements vscode.InlayHintsProvider {
+	private _onDidChange = new vscode.EventEmitter<void>();
+
+	readonly onDidChangeInlayHints = this._onDidChange.event;
+
+	provideInlayHints(
+		document: vscode.TextDocument,
+		range: vscode.Range,
+		token: vscode.CancellationToken): vscode.ProviderResult<vscode.InlayHint[]>
+	{
+		return getSubs.getInlays(document);
+	}
+
+	public refreshHints() {
+		this._onDidChange.fire();
+	}
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	const config = vscode.workspace.getConfiguration(EXT_NAME);
+
+	const provider = new SrtInlayHintsProvider();
 
 	vscode.window.onDidChangeActiveTextEditor((editor) => {
 		try {
@@ -48,11 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	vscode.workspace.onDidCloseTextDocument((document) => getSubs.disposeDecorations(document));
 
-	vscode.languages.registerInlayHintsProvider('subrip', {
-		provideInlayHints(document, range, token) {
-			return getSubs.getInlays(document);
-		}
-	});
+	vscode.languages.registerInlayHintsProvider('subrip', provider);
 
 	context.subscriptions.push(getSubs.getDiagnosticCollection());
 
@@ -63,12 +79,12 @@ export function activate(context: vscode.ExtensionContext) {
 	const myCommandId = `${EXT_NAME}.toggleHUD`;
 	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, () => {
 		enabled = !enabled;
-		const document = vscode.window.activeTextEditor?.document;
 		const editors = vscode.window.visibleTextEditors;
 		for (const editor of editors) {
 			getSubs.annotateSubs(editor.document, enabled);
 		}
 		updateStatusBarItem();
+		provider.refreshHints();
 	}));
 
 	myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
